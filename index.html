@@ -1969,13 +1969,18 @@ function dueDateFull(dateStr) {
   return lbl;
 }
 
-// Combina el conteo relativo ("En 3 días" / "2 días de atraso") con la fecha exacta
-// ("15 jul"), evitando duplicar cuando el label relativo ya ES la fecha (vencimientos lejanos).
+// Combina la fecha exacta ("15 jul") con el conteo de días SIEMPRE ("En 12 días" / "3 días
+// de atraso" / "Vence hoy" / "Mañana"), sin importar qué tan lejos esté el vencimiento.
 // Formato único usado en todos los badges de vencimiento de la app.
 function dueDateFullLabel(dateStr) {
-  const relLabel = dueDateLabel(dateStr);
   const absLabel = dueDateFull(dateStr);
-  if (!absLabel || relLabel === absLabel) return relLabel;
+  const d = daysUntilDue(dateStr);
+  if (d === null) return absLabel;
+  let relLabel;
+  if (d < 0)       relLabel = Math.abs(d) + (Math.abs(d)===1?' día':' días') + ' de atraso';
+  else if (d === 0) relLabel = 'Vence hoy';
+  else if (d === 1) relLabel = 'Mañana';
+  else              relLabel = 'En ' + d + ' días';
   return absLabel + ' · ' + relLabel;
 }
 
