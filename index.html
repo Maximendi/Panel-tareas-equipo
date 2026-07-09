@@ -187,6 +187,12 @@
   .empty-icon { font-size: 38px; margin-bottom: 12px; }
   .empty h3  { font-size: 16px; font-weight: 700; color: var(--text-2); margin-bottom: 6px; }
   .empty p   { font-size: 12px; }
+
+  /* ── Estado vacío de Hoy (pantalla principal) ── */
+  .hoy-empty { text-align: center; padding: 70px 20px 50px; }
+  .hoy-empty-badge { width: 92px; height: 92px; border-radius: 50%; background: var(--accent-lt); border: 1px solid var(--accent-md); display: flex; align-items: center; justify-content: center; margin: 0 auto 22px; font-size: 46px; box-shadow: var(--shadow); }
+  .hoy-empty h3 { font-size: 19px; font-weight: 800; color: var(--text); margin-bottom: 8px; letter-spacing: -0.2px; }
+  .hoy-empty p  { font-size: 13px; color: var(--text-3); max-width: 380px; margin: 0 auto; line-height: 1.6; }
   .error-box { background: #fff1f2; border: 1px solid #fecdd3; border-radius: var(--radius); padding: 12px 18px; color: #9f1239; font-size: 12px; margin-bottom: 12px; }
   .no-tasks  { font-size: 12px; color: var(--text-3); font-style: italic; padding: 6px 0 8px 8px; }
   .artifact-footer { text-align: center; margin-top: 32px; color: var(--text-3); font-size: 11px; letter-spacing: .5px; }
@@ -1203,7 +1209,7 @@ function renderHoy() {
 
   // ── Vacío ──
   if (!totalToday) {
-    html += '<div class="empty"><div class="empty-icon">🌅</div><h3>Nada asignado para hoy</h3><p>Usá los botones de día en Mis Tareas para traer acá tus focos del día.</p></div></div>';
+    html += '<div class="hoy-empty"><div class="hoy-empty-badge">☀️</div><h3>Nada asignado para hoy</h3><p>Usá los botones de día en Mis Tareas para traer acá tus focos del día.</p></div></div>';
     el.innerHTML = html;
     return;
   }
