@@ -984,7 +984,7 @@ function renderTaskCard(t) {
     _dueBadge = '<span class="due-badge" id="due-' + t.id
       + '" onclick="editDueDate(\'' + t.id + '\')"'
       + ' style="background:' + ds.bg + ';color:' + ds.color + ';border-color:' + ds.border + '"'
-      + ' title="Editar fecha de vencimiento">📅 ' + dueDateLabel(t.dueDate) + '</span>';
+      + ' title="Editar fecha de vencimiento">📅 ' + dueDateFullLabel(t.dueDate) + '</span>';
   }
   // Badge de tiempo estimado pre-computado
   let _horasBadge = '';
@@ -1069,8 +1069,8 @@ function renderTaskCard(t) {
       ${_progressFull}
     </div>
     <div class="task-right">
-      <span class="pill" style="background:${ef.bg};color:${ef.color};border:1px solid ${ef.border}">${ef.label}</span>
       ${_dueBadge}
+      <span class="pill" style="background:${ef.bg};color:${ef.color};border:1px solid ${ef.border}">${ef.label}</span>
       ${_horasBadge}
       <div class="day-btns">${dayBtns}</div>
       ${_delaBtn}
@@ -1223,7 +1223,7 @@ function renderHoy() {
       var duePill = '';
       if (t.dueDate) {
         var ds = dueBadgeStyle(t.dueDate);
-        duePill = '<span class="pill" style="background:' + ds.bg + ';color:' + ds.color + ';border:1px solid ' + ds.border + '">📅 ' + dueDateLabel(t.dueDate) + '</span>';
+        duePill = '<span class="pill" style="background:' + ds.bg + ';color:' + ds.color + ';border:1px solid ' + ds.border + '">📅 ' + dueDateFullLabel(t.dueDate) + '</span>';
       }
       var horasPill = taskHorasPill(t);
       var noteHtml = t.dayNote
@@ -1874,7 +1874,7 @@ function renderDelegadas() {
 
       var efPill  = '<span class="pill" style="background:' + ef.bg + ';color:' + ef.color + ';border:1px solid ' + ef.border + '">' + ef.label + '</span>';
       var urgPill = '<span class="pill" style="background:var(--bg);color:var(--text-3);border:1px solid var(--border)">' + urgLabel + '</span>';
-      var duePill = ds ? '<span class="pill" style="background:' + ds.bg + ';color:' + ds.color + ';border:1px solid ' + ds.border + '">📅 ' + dueDateLabel(t.dueDate) + '</span>' : '';
+      var duePill = ds ? '<span class="pill" style="background:' + ds.bg + ';color:' + ds.color + ';border:1px solid ' + ds.border + '">📅 ' + dueDateFullLabel(t.dueDate) + '</span>' : '';
 
       // Fecha y antigüedad de la delegación (clic para corregir la fecha)
       var agePill = '';
@@ -1969,6 +1969,16 @@ function dueDateFull(dateStr) {
   return lbl;
 }
 
+// Combina el conteo relativo ("En 3 días" / "2 días de atraso") con la fecha exacta
+// ("15 jul"), evitando duplicar cuando el label relativo ya ES la fecha (vencimientos lejanos).
+// Formato único usado en todos los badges de vencimiento de la app.
+function dueDateFullLabel(dateStr) {
+  const relLabel = dueDateLabel(dateStr);
+  const absLabel = dueDateFull(dateStr);
+  if (!absLabel || relLabel === absLabel) return relLabel;
+  return absLabel + ' · ' + relLabel;
+}
+
 function dueBadgeStyle(dateStr) {
   const d = daysUntilDue(dateStr);
   if (d === null) return { bg:'var(--bg)', color:'var(--text-3)', border:'var(--border)' };
@@ -1980,15 +1990,10 @@ function dueBadgeStyle(dateStr) {
 
 // ── Badge de Vencimientos ─────────────────────────────────────────────────────
 function updateVencimientosBadge() {
-  const n = tasks.filter(function(t){
-    return !t.done && t.dueDate && daysUntilDue(t.dueDate) < 0;
-  }).length;
-  const todayN = tasks.filter(function(t){
-    return !t.done && t.dueDate && daysUntilDue(t.dueDate) === 0;
-  }).length;
-  const total = n + todayN;
+  const withDate = tasks.filter(function(t){ return !t.done && t.dueDate; });
+  const urgent   = withDate.filter(function(t){ return daysUntilDue(t.dueDate) <= 0; }).length;
   const el = document.getElementById('badge-vencimientos');
-  if (el) el.textContent = total ? total : '';
+  if (el) el.textContent = withDate.length ? (urgent ? withDate.length + ' · ' + urgent + '⚠' : withDate.length) : '';
 }
 
 // ── Render Vencimientos ───────────────────────────────────────────────────────
@@ -2015,12 +2020,7 @@ function renderVencimientos() {
     const isOverdue = diff < 0;
     const accentColor = isOverdue ? '#e11d48' : ds.color;
 
-    // Combina el conteo relativo ("En 3 días" / "2 días de atraso") con la fecha exacta
-    // ("15 jul"), evitando duplicar cuando el label relativo ya ES la fecha (vencimientos lejanos).
-    const _relLabel = dueDateLabel(t.dueDate);
-    const _absLabel = dueDateFull(t.dueDate);
-    const _duePillTxt = (!_absLabel || _relLabel === _absLabel) ? _relLabel : (_relLabel + ' · ' + _absLabel);
-    const duePill = '<span class="pill" style="background:' + ds.bg + ';color:' + ds.color + ';border:1px solid ' + ds.border + ';font-weight:700">📅 ' + _duePillTxt + '</span>';
+    const duePill = '<span class="pill" style="background:' + ds.bg + ';color:' + ds.color + ';border:1px solid ' + ds.border + ';font-weight:700">📅 ' + dueDateFullLabel(t.dueDate) + '</span>';
     const efPill  = '<span class="pill" style="background:' + ef.bg + ';color:' + ef.color + ';border:1px solid ' + ef.border + '">' + ef.label + '</span>';
     const urgPill = '<span class="pill" style="background:var(--bg);color:var(--text-3);border:1px solid var(--border)">' + (URGENCY[t.urgency]?.label||'') + '</span>';
 
@@ -2214,7 +2214,7 @@ function renderDesglose() {
   // ── Lista de tareas (columna izquierda) ──
   let listHtml = '';
   if (!active.length) {
-    listHtml = '<div class="no-tasks" style="padding:16px 4px">Aún no hay tareas.<br>Creá una con el botón de arriba.</div>';
+    listHtml = '<div class="no-tasks" style="padding:16px 4px">Aún no hay tareas.<br>Creá un desglose desde el botón "📋 Desglosar" en Mis Tareas.</div>';
   } else {
     listHtml = active.map(function(d) {
       const total     = d.steps.length;
@@ -2347,7 +2347,6 @@ function renderDesglose() {
 
   el.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
     + '<span style="font-size:13px;color:var(--text-3)">' + active.length + ' tarea' + (active.length===1?'':'s') + ' activa' + (active.length===1?'':'s') + '</span>'
-    + '<button onclick="showDesgloseForm()" style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:var(--radius-pill);background:var(--text);color:#fff;font-size:12px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:opacity .15s" onmouseover="this.style.opacity=\'.85\'" onmouseout="this.style.opacity=\'1\'">＋ Nueva tarea desglosada</button>'
     + '</div>'
     + '<div id="dsg-form-container"></div>'
     + '<div class="dsg-layout">'
