@@ -152,6 +152,7 @@
   .task-check:hover { border-color: var(--accent); background: var(--accent-lt); }
   .task-info { flex: 1; min-width: 0; }
   .task-title { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3; }
+  .task-client-kicker { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; color: #0e7490; margin-bottom: 2px; }
   .task-notes { font-size: 11px; color: var(--text-3); margin-top: 2px; line-height: 1.4; }
   .task-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
   .task-actions { display: flex; gap: 2px; opacity: 0; transition: opacity .15s; }
@@ -918,7 +919,7 @@ function deleteIdea(id) {
 function convertIdeaToTask(id) {
   const it = ideas.find(function(x){ return x.id === id; });
   if (!it) return;
-  tasks.push({ id: genId(), title: it.text, urgency: 'medium', effort: 'medium', notes: '', dueDate: null, delegated: false, delegatedTo: null, horas: null, done: false, day: null, createdAt: new Date().toISOString() });
+  tasks.push({ id: genId(), title: it.text, cliente: null, urgency: 'medium', effort: 'medium', notes: '', dueDate: null, delegated: false, delegatedTo: null, horas: null, done: false, day: null, createdAt: new Date().toISOString() });
   ideas = ideas.filter(function(x){ return x.id !== id; });
   saveIdeas();
   saveTasks();
@@ -1253,6 +1254,7 @@ function renderTaskCard(t) {
     <div class="task-accent" style="background:${uc}"></div>
     <div class="task-check" onclick="completeTask('${t.id}')"></div>
     <div class="task-info">
+      ${t.cliente?`<div class="task-client-kicker">🏢 ${esc(t.cliente)}</div>`:''}
       <div class="task-title">${_dayChip}${esc(t.title)}</div>
       ${t.notes?`<div class="task-notes">${esc(t.notes)}</div>`:''}
       ${_delaLine}
@@ -1423,6 +1425,7 @@ function renderHoy() {
       html += '<div class="' + itemCls + '">'
         + '<div class="hoy-task-check" onclick="completeTask(\'' + t.id + '\')" style="margin-top:4px"></div>'
         + '<div style="flex:1;min-width:0">'
+        + (t.cliente ? '<div class="task-client-kicker">🏢 ' + esc(t.cliente) + '</div>' : '')
         + '<div class="hoy-min-title">' + esc(t.title) + '</div>'
         + (t.notes ? '<div class="hoy-min-notes">' + esc(t.notes) + '</div>' : '')
         + ((duePill || horasPill) ? '<div style="margin-top:5px">' + duePill + horasPill + '</div>' : '')
@@ -1480,6 +1483,7 @@ function renderSemana() {
           <div style="width:3px;border-radius:2px;align-self:stretch;min-height:24px;flex-shrink:0;background:${uc}"></div>
           <div class="semana-task-check" onclick="completeTask('${t.id}')"></div>
           <div class="semana-task-info">
+            ${t.cliente?`<div class="task-client-kicker">🏢 ${esc(t.cliente)}</div>`:''}
             <div class="semana-task-title">${esc(t.title)}</div>
             ${t.notes?`<div class="semana-task-notes">${esc(t.notes)}</div>`:''}
             ${horasPillSem ? `<div style="margin-top:3px">${horasPillSem}</div>` : ''}
@@ -1558,6 +1562,10 @@ function showTaskFormToday() {
       <label>Título *</label>
       <input id="f-title" type="text" placeholder="Ej: Revisar liquidación de sueldo" />
     </div>
+    <div class="form-group">
+      <label>Cliente (opcional)</label>
+      <input id="f-cliente" type="text" placeholder="Ej: Aristech, Fundación CAU..." />
+    </div>
     <div class="form-row">
       <div class="form-group" style="margin-bottom:0">
         <label>Urgencia</label>
@@ -1600,7 +1608,7 @@ function showTaskFormToday() {
     </div>
     <div class="form-group">
       <label>Notas (opcional)</label>
-      <textarea id="f-notes" rows="2" placeholder="Cliente, norma, aclaraciones..."></textarea>
+      <textarea id="f-notes" rows="2" placeholder="Norma, aclaraciones..."></textarea>
     </div>
     <div class="form-actions">
       <button class="btn-cancel" onclick="cancelTaskForm()">Cancelar</button>
@@ -1682,6 +1690,7 @@ function renderCompleted() {
         <div class="task-accent" style="background:${uc}"></div>
         <div class="task-check" style="background:var(--accent);border-color:var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;cursor:pointer" onclick="uncompleteTask('${item.id}')" title="Desmarcar tarea">✓</div>
         <div class="task-info">
+          ${item.cliente?`<div class="task-client-kicker">🏢 ${esc(item.cliente)}</div>`:''}
           <div class="task-title" style="text-decoration:line-through;color:var(--text-3)">${esc(item.title)}</div>
           ${item.notes?`<div class="task-notes">${esc(item.notes)}</div>`:''}
           ${dateStr?`<div style="font-size:10px;color:var(--text-3);margin-top:2px">Completada: ${dateStr}</div>`:''}
@@ -1715,6 +1724,10 @@ function showTaskForm(taskOrUrgency=null) {
     <div class="form-group">
       <label>Título *</label>
       <input id="f-title" type="text" placeholder="Ej: Presentar DDJJ Flexwind" value="${esc(task?.title||'')}" />
+    </div>
+    <div class="form-group">
+      <label>Cliente (opcional)</label>
+      <input id="f-cliente" type="text" placeholder="Ej: Aristech, Fundación CAU..." value="${esc(task?.cliente||'')}" />
     </div>
     <div class="form-row">
       <div class="form-group" style="margin-bottom:0">
@@ -1758,7 +1771,7 @@ function showTaskForm(taskOrUrgency=null) {
     </div>
     <div class="form-group">
       <label>Notas (opcional)</label>
-      <textarea id="f-notes" rows="2" placeholder="Cliente, norma, aclaraciones...">${esc(task?.notes||'')}</textarea>
+      <textarea id="f-notes" rows="2" placeholder="Norma, aclaraciones...">${esc(task?.notes||'')}</textarea>
     </div>
     <div class="form-actions">
       <button class="btn-cancel" onclick="cancelTaskForm()">Cancelar</button>
@@ -1782,6 +1795,7 @@ function cancelTaskForm() {
 function submitTaskForm() {
   const title       = (document.getElementById('f-title')?.value||'').trim();
   if (!title) { alert('El título es obligatorio.'); return; }
+  const cliente     = (document.getElementById('f-cliente')?.value||'').trim() || null;
   const urgency     = document.getElementById('f-urgency').value;
   const effort      = document.getElementById('f-effort').value;
   const notes       = (document.getElementById('f-notes')?.value||'').trim();
@@ -1807,7 +1821,7 @@ function submitTaskForm() {
   if (editingTaskId) {
     const t = tasks.find(x=>x.id===editingTaskId);
     if (t) {
-      Object.assign(t, {title,urgency,effort,notes,dueDate,delegated,delegatedTo,horas});
+      Object.assign(t, {title,cliente,urgency,effort,notes,dueDate,delegated,delegatedTo,horas});
       if (delegated) {
         t.delegatedAt = delegatedAt || t.delegatedAt || new Date().toISOString();
       } else {
@@ -1816,7 +1830,7 @@ function submitTaskForm() {
       }
     }
   } else {
-    tasks.push({id:genId(),title,urgency,effort,notes,dueDate,delegated,delegatedTo,horas,delegatedAt:delegated?(delegatedAt||new Date().toISOString()):null,done:false,day:addingToHoy?'hoy':null,createdAt:new Date().toISOString()});
+    tasks.push({id:genId(),title,cliente,urgency,effort,notes,dueDate,delegated,delegatedTo,horas,delegatedAt:delegated?(delegatedAt||new Date().toISOString()):null,done:false,day:addingToHoy?'hoy':null,createdAt:new Date().toISOString()});
   }
   saveTasks();
   cancelTaskForm();
@@ -2101,6 +2115,7 @@ function renderDelegadas() {
         + '<div class="task-accent" style="background:' + uc + '"></div>'
         + '<div class="task-check" onclick="completeTask(\'' + t.id + '\')"></div>'
         + '<div class="task-info">'
+        + (t.cliente ? '<div class="task-client-kicker">🏢 ' + esc(t.cliente) + '</div>' : '')
         + '<div class="task-title">' + esc(t.title) + '</div>'
         + (t.notes ? '<div class="task-notes">' + esc(t.notes) + '</div>' : '')
         + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px">'
@@ -2257,6 +2272,7 @@ function renderVencimientos() {
       + '<div class="task-accent" style="background:' + accentColor + '"></div>'
       + '<div class="task-check" onclick="completeTask(\'' + t.id + '\')"></div>'
       + '<div class="task-info">'
+      + (t.cliente ? '<div class="task-client-kicker">🏢 ' + esc(t.cliente) + '</div>' : '')
       + '<div class="task-title">' + esc(t.title) + '</div>'
       + (t.notes ? '<div class="task-notes">' + esc(t.notes) + '</div>' : '')
       + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px">'
@@ -3002,7 +3018,7 @@ function runGlobalSearch() {
   function hit(s) { return String(s || '').toLowerCase().indexOf(q) !== -1; }
 
   var taskHits = tasks.filter(function(t) {
-    return !t.done && (hit(t.title) || hit(t.notes) || hit(t.delegatedTo) || hit(t.dayNote));
+    return !t.done && (hit(t.title) || hit(t.cliente) || hit(t.notes) || hit(t.delegatedTo) || hit(t.dayNote));
   }).slice(0, 8);
 
   var dsgHits = desgloses.filter(function(d) {
@@ -3018,6 +3034,7 @@ function runGlobalSearch() {
       + taskHits.map(function(t) {
           var where = t.day ? (t.day === 'hoy' ? 'Hoy' : 'Semana · ' + (WEEK_NAMES[t.day] || t.day)) : 'Mis Tareas';
           var extra = [
+            t.cliente ? ('🏢 ' + t.cliente) : '',
             URGENCY[t.urgency] ? URGENCY[t.urgency].label : '',
             t.delegated ? ('🤝 ' + (t.delegatedTo || 'delegada')) : '',
             t.dueDate ? ('📅 ' + dueDateLabel(t.dueDate)) : ''
@@ -3217,8 +3234,8 @@ function exportTasksExcel() {
   var pendientes = tasks.filter(function(t){ return !t.done; });
   if (!pendientes.length) { alert('No hay tareas pendientes para exportar.'); return; }
 
-  var HEADERS = ['Título','Urgencia','Esfuerzo','Día asignado','Vencimiento','Delegada a','Fecha delegación','Seguimiento','Avance','Desglose','Notas','Creada'];
-  var COL_W  = [46, 14, 11, 13, 13, 18, 16, 13, 9, 13, 42, 11];
+  var HEADERS = ['Título','Cliente','Urgencia','Esfuerzo','Día asignado','Vencimiento','Delegada a','Fecha delegación','Seguimiento','Avance','Desglose','Notas','Creada'];
+  var COL_W  = [46, 22, 14, 11, 13, 13, 18, 16, 13, 9, 13, 42, 11];
 
   function fdate(iso) {
     if (!iso) return '';
@@ -3270,17 +3287,18 @@ function exportTasksExcel() {
     var diaLbl = t.day ? (t.day === 'hoy' ? 'Hoy' : (WEEK_NAMES[t.day] || t.day)) : '';
     var r = '<row r="' + rowNum + '">';
     r += cell(0, t.title, base);
-    r += cell(1, URGENCY[t.urgency] ? URGENCY[t.urgency].label : '', base);
-    r += cell(2, t.effort === 'high' ? 'Alto' : t.effort === 'low' ? 'Bajo' : 'Medio', base);
-    r += cell(3, diaLbl, base);
-    r += cell(4, fymd(t.dueDate), base);
-    r += cell(5, t.delegated ? (t.delegatedTo || 'Sin asignar') : '', base);
-    r += cell(6, t.delegated ? fdate(t.delegatedAt) : '', base);
-    r += cell(7, t.delegated ? fymd(t.followUpDate) : '', base);
-    r += cell(8, (t.progress !== null && t.progress !== undefined) ? (t.progress + '%') : '', base);
-    r += cell(9, dsg, base);
-    r += cell(10, t.notes || '', base);
-    r += cell(11, fdate(t.createdAt), base);
+    r += cell(1, t.cliente || '', base);
+    r += cell(2, URGENCY[t.urgency] ? URGENCY[t.urgency].label : '', base);
+    r += cell(3, t.effort === 'high' ? 'Alto' : t.effort === 'low' ? 'Bajo' : 'Medio', base);
+    r += cell(4, diaLbl, base);
+    r += cell(5, fymd(t.dueDate), base);
+    r += cell(6, t.delegated ? (t.delegatedTo || 'Sin asignar') : '', base);
+    r += cell(7, t.delegated ? fdate(t.delegatedAt) : '', base);
+    r += cell(8, t.delegated ? fymd(t.followUpDate) : '', base);
+    r += cell(9, (t.progress !== null && t.progress !== undefined) ? (t.progress + '%') : '', base);
+    r += cell(10, dsg, base);
+    r += cell(11, t.notes || '', base);
+    r += cell(12, fdate(t.createdAt), base);
     r += '</row>';
     rowsXml += r;
     rowNum++;
@@ -3296,7 +3314,7 @@ function exportTasksExcel() {
     + '<sheetFormatPr defaultRowHeight="16"/>'
     + colsXml
     + '<sheetData>' + rowsXml + '</sheetData>'
-    + '<mergeCells count="2"><mergeCell ref="A1:L1"/><mergeCell ref="A2:L2"/></mergeCells>'
+    + '<mergeCells count="2"><mergeCell ref="A1:M1"/><mergeCell ref="A2:M2"/></mergeCells>'
     + '</worksheet>';
 
   var stylesXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
