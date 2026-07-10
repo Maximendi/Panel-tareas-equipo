@@ -455,7 +455,7 @@
   .ideas-fab { position: relative; flex-shrink: 0; width: 66px; height: 66px; border-radius: 50%; border: none; background: linear-gradient(135deg, #ffcf5c, #f5a623); box-shadow: 0 4px 14px rgba(180,120,0,0.30); font-size: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform .15s, box-shadow .15s; }
   .ideas-fab:hover { transform: scale(1.08) rotate(-4deg); box-shadow: 0 6px 18px rgba(180,120,0,0.40); }
   .ideas-fab-badge { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: #e11d48; color: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg); }
-  .ideas-fab-label { font-size: 11px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
+  .ideas-fab-label { font-size: 13px; font-weight: 600; font-style: italic; font-family: Georgia, 'Times New Roman', serif; color: var(--accent); white-space: nowrap; }
 
   /* ── Panel de Ideas — estilo cuaderno espiralado ── */
   .ideas-overlay { position: fixed; inset: 0; background: rgba(30,20,10,0.45); z-index: 250; display: flex; align-items: center; justify-content: center; padding: 24px; }
@@ -512,7 +512,7 @@
       <div class="header-date" id="header-date"></div>
       <h1>Panel de <em>Tareas</em></h1>
     </div>
-    <div style="display:flex;align-items:flex-start;gap:10px">
+    <div style="display:flex;align-items:center;gap:10px">
       <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
         <div class="search-wrap">
           <input class="search-inp" id="global-search" placeholder="🔍 Buscar tareas…" oninput="runGlobalSearch()" onfocus="runGlobalSearch()" onkeydown="if(event.key==='Escape'){this.value='';closeSearch();this.blur()}" autocomplete="off">
