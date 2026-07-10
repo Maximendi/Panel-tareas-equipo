@@ -451,6 +451,35 @@
   .lock-btn:hover { opacity: .85; }
   .lock-error { font-size: 12px; color: #e11d48; margin-top: 10px; min-height: 16px; }
 
+  /* ── Botón flotante de Ideas ── */
+  .ideas-fab { position: fixed; bottom: 26px; right: 26px; width: 58px; height: 58px; border-radius: 50%; border: none; background: linear-gradient(135deg, #ffcf5c, #f5a623); box-shadow: 0 6px 18px rgba(180,120,0,0.35); font-size: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 150; transition: transform .15s, box-shadow .15s; }
+  .ideas-fab:hover { transform: scale(1.08) rotate(-4deg); box-shadow: 0 8px 22px rgba(180,120,0,0.45); }
+  .ideas-fab-badge { position: absolute; top: -3px; right: -3px; min-width: 19px; height: 19px; padding: 0 4px; border-radius: 10px; background: #e11d48; color: #fff; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg); }
+
+  /* ── Panel de Ideas — estilo cuaderno espiralado ── */
+  .ideas-overlay { position: fixed; inset: 0; background: rgba(30,20,10,0.45); z-index: 250; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .notebook { display: flex; width: 100%; max-width: 580px; max-height: 84vh; box-shadow: 0 20px 60px rgba(0,0,0,0.35); border-radius: 4px 14px 14px 4px; overflow: hidden; }
+  .notebook-spine { flex-shrink: 0; width: 42px; background-color: #ddd5c4; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='42' height='34' viewBox='0 0 42 34'%3E%3Cellipse cx='19' cy='17' rx='12' ry='11' fill='none' stroke='%23a89f8e' stroke-width='4'/%3E%3Crect x='25' y='9' width='15' height='16' rx='5' fill='%23555049'/%3E%3C/svg%3E"); background-repeat: repeat-y; background-position: left top; background-size: 42px 34px; box-shadow: inset -6px 0 10px -6px rgba(0,0,0,0.35); }
+  .notebook-paper { flex: 1; min-width: 0; background: #fdfaf2; display: flex; flex-direction: column; }
+  .notebook-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 26px 14px; border-bottom: 1px solid rgba(0,0,0,0.06); flex-shrink: 0; }
+  .notebook-title { font-size: 18px; font-weight: 800; color: #4a3f2c; letter-spacing: -0.3px; }
+  .notebook-close { width: 28px; height: 28px; border-radius: 50%; border: none; background: rgba(0,0,0,0.06); color: #6b5f4a; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+  .notebook-close:hover { background: rgba(0,0,0,0.12); }
+  .notebook-lines { position: relative; flex: 1; overflow-y: auto; padding: 4px 26px 24px 44px; background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 33px, rgba(0,0,0,0.08) 33px, rgba(0,0,0,0.08) 34px); background-position: 0 4px; }
+  .notebook-lines::before { content: ''; position: absolute; top: 0; bottom: 0; left: 26px; width: 1px; background: rgba(225,29,72,0.25); }
+  .notebook-input-row { position: relative; }
+  .notebook-inp { width: 100%; border: none; background: transparent; outline: none; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 15px; color: #4a3f2c; line-height: 34px; height: 34px; padding: 0; }
+  .notebook-inp::placeholder { color: #a89f8e; }
+  .notebook-entry { position: relative; display: flex; align-items: flex-start; gap: 12px; min-height: 34px; }
+  .notebook-entry-date { flex-shrink: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 10px; font-weight: 700; color: #a89f8e; line-height: 34px; white-space: nowrap; }
+  .notebook-entry-text { flex: 1; min-width: 0; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 15px; color: #4a3f2c; line-height: 34px; word-break: break-word; }
+  .notebook-entry-actions { flex-shrink: 0; display: flex; gap: 2px; opacity: 0; transition: opacity .15s; line-height: 34px; }
+  .notebook-entry:hover .notebook-entry-actions { opacity: 1; }
+  .notebook-entry-btn { border: none; background: none; cursor: pointer; font-size: 10px; font-weight: 700; color: #8a7a5a; padding: 2px 6px; border-radius: 6px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; white-space: nowrap; }
+  .notebook-entry-btn:hover { background: rgba(0,0,0,0.06); }
+  .notebook-entry-btn.del:hover { background: #fff1f2; color: #e11d48; }
+  .notebook-empty { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 13px; color: #a89f8e; padding-top: 6px; }
+
 </style>
 </head>
 <body>
@@ -637,8 +666,32 @@
       <div class="help-section-text">Registrá los puntos críticos en los que necesitás concentrarte esta semana. Podés marcarlos como completados a medida que los resolvés. Al inicio de cada semana nueva, la lista se reinicia automáticamente.</div>
     </div>
 
+    <div class="help-section" style="border-left-color:#f5a623">
+      <div class="help-section-title">💡 Ideas</div>
+      <div class="help-section-text">El botón flotante amarillo abre un cuaderno aparte para anotar ideas sueltas que todavía no son una tarea concreta — sin urgencia, esfuerzo ni vencimiento. Cuando una idea madura, el botón <strong>→ Tarea</strong> la convierte en una tarea real dentro de Mis Tareas.</div>
+    </div>
+
     <div class="help-tip">
       💡 <strong>Botones de día:</strong> Cada tarea tiene botones <em>Hoy · Lun · Mar · Mié · Jue · Vie</em>. Hacer click en el día activo lo desactiva. Las tareas asignadas a un día siguen visibles en Mis Tareas con una etiqueta del día, y aparecen también en Hoy o Semana.
+    </div>
+  </div>
+</div>
+
+<!-- ── Botón flotante + Panel de Ideas ── -->
+<button class="ideas-fab" id="ideas-fab" onclick="showIdeas()" title="Espacio para ideas sueltas">
+  💡
+  <span class="ideas-fab-badge" id="ideas-fab-badge" style="display:none"></span>
+</button>
+
+<div class="ideas-overlay" id="ideas-overlay" style="display:none" onclick="if(event.target===this)closeIdeas()">
+  <div class="notebook">
+    <div class="notebook-spine"></div>
+    <div class="notebook-paper">
+      <div class="notebook-header">
+        <span class="notebook-title">💡 Ideas</span>
+        <button class="notebook-close" onclick="closeIdeas()">✕</button>
+      </div>
+      <div class="notebook-lines" id="notebook-lines"></div>
     </div>
   </div>
 </div>
@@ -673,6 +726,7 @@ let hoyExtras       = JSON.parse(localStorage.getItem('sm_hoy_extras_v1') || '{}
 let vencEditId      = null; // id de tarea con date-picker abierto en Vencimientos
 let delaFollowEditId = null; // id de tarea con date-picker de seguimiento abierto en Delegadas
 let delaDateEditId   = null; // id de tarea con date-picker de fecha de delegación abierto
+let ideas            = JSON.parse(localStorage.getItem('sm_ideas_v1') || '[]');
 // migrate old today:true → day:'hoy'
 tasks = tasks.map(t => { if (t.today === true && !t.day) { t.day = 'hoy'; } return t; });
 // migrate: tareas delegadas sin fecha de delegación → usar createdAt como referencia
@@ -740,6 +794,95 @@ function setTaskFilter(f) {
   if (f === 'vencimientos') renderVencimientos();
 }
 
+
+// =============================================================================
+// IDEAS — cuaderno aparte para anotar ideas sueltas que no son tareas
+// =============================================================================
+
+function saveIdeas() {
+  localStorage.setItem('sm_ideas_v1', JSON.stringify(ideas));
+  updateIdeasBadge();
+}
+
+function updateIdeasBadge() {
+  const el = document.getElementById('ideas-fab-badge');
+  if (!el) return;
+  if (ideas.length) { el.textContent = ideas.length; el.style.display = 'flex'; }
+  else { el.style.display = 'none'; }
+}
+
+function ideaDateLabel(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const MESES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return d.getDate() + ' ' + MESES[d.getMonth()];
+}
+
+function showIdeas() {
+  document.getElementById('ideas-overlay').style.display = 'flex';
+  renderIdeas();
+  setTimeout(function(){ document.getElementById('idea-inp')?.focus(); }, 50);
+}
+
+function closeIdeas() {
+  document.getElementById('ideas-overlay').style.display = 'none';
+}
+
+function renderIdeas() {
+  const el = document.getElementById('notebook-lines');
+  if (!el) return;
+
+  const sorted = ideas.slice().sort(function(a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
+
+  let html = '<div class="notebook-input-row">'
+    + '<input class="notebook-inp" id="idea-inp" placeholder="✎ Anotá una idea…" onkeydown="if(event.key===\'Enter\')addIdea()">'
+    + '</div>';
+
+  if (!sorted.length) {
+    html += '<div class="notebook-empty">Todavía no hay ideas anotadas. Escribí la primera arriba y apretá Enter.</div>';
+  } else {
+    html += sorted.map(function(it) {
+      return '<div class="notebook-entry">'
+        + '<div class="notebook-entry-date">' + ideaDateLabel(it.createdAt) + '</div>'
+        + '<div class="notebook-entry-text">' + esc(it.text) + '</div>'
+        + '<div class="notebook-entry-actions">'
+        + '<button class="notebook-entry-btn" onclick="convertIdeaToTask(\'' + it.id + '\')" title="Convertir en tarea">→ Tarea</button>'
+        + '<button class="notebook-entry-btn del" onclick="deleteIdea(\'' + it.id + '\')" title="Eliminar">✕</button>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  el.innerHTML = html;
+}
+
+function addIdea() {
+  const inp = document.getElementById('idea-inp');
+  if (!inp) return;
+  const text = (inp.value || '').trim();
+  if (!text) { inp.focus(); return; }
+  ideas.push({ id: genId(), text: text, createdAt: new Date().toISOString() });
+  saveIdeas();
+  renderIdeas();
+  setTimeout(function(){ document.getElementById('idea-inp')?.focus(); }, 30);
+}
+
+function deleteIdea(id) {
+  ideas = ideas.filter(function(x){ return x.id !== id; });
+  saveIdeas();
+  renderIdeas();
+}
+
+function convertIdeaToTask(id) {
+  const it = ideas.find(function(x){ return x.id === id; });
+  if (!it) return;
+  tasks.push({ id: genId(), title: it.text, urgency: 'medium', effort: 'medium', notes: '', dueDate: null, delegated: false, delegatedTo: null, horas: null, done: false, day: null, createdAt: new Date().toISOString() });
+  ideas = ideas.filter(function(x){ return x.id !== id; });
+  saveIdeas();
+  saveTasks();
+  closeIdeas();
+  switchTab('tasks');
+}
 
 // =============================================================================
 // FOCO SEMANAL
@@ -2874,7 +3017,7 @@ function runGlobalSearch() {
 // RESPALDO — EXPORTAR / IMPORTAR JSON
 // =============================================================================
 var BACKUP_KEYS = [
-  'sm_tasks_v3',
+  'sm_tasks_v3', 'sm_ideas_v1',
   'sm_foco_semanal_v1', 'sm_foco_semanal_week_v1', 'sm_desglose_v1', 'sm_last_seen_date_v1'
 ];
 
@@ -2930,6 +3073,7 @@ function reloadStateFromStorage() {
     return t;
   });
   hoyExtras      = JSON.parse(localStorage.getItem('sm_hoy_extras_v1') || '{}');
+  ideas          = JSON.parse(localStorage.getItem('sm_ideas_v1') || '[]');
   focoItems      = JSON.parse(localStorage.getItem('sm_foco_semanal_v1') || '[]');
   focoWeekKey    = localStorage.getItem('sm_foco_semanal_week_v1') || '';
   desgloses      = JSON.parse(localStorage.getItem('sm_desglose_v1') || '[]');
@@ -2946,6 +3090,8 @@ function reloadStateFromStorage() {
   updateTaskBadge(); updateHoyBadge(); updateSemanaBadge(); updateCompletedBadge();
   updateDesgloseBadge(); updateVencimientosBadge(); updateDelegadasBadge(); updateFocoBadge();
   updateStatusCounts();
+  updateIdeasBadge();
+  if (document.getElementById('ideas-overlay')?.style.display === 'flex') renderIdeas();
 }
 
 // =============================================================================
@@ -3232,6 +3378,7 @@ function bootApp() {
   updateDelegadasBadge();
   updateFocoBadge();
   updateStatusCounts();
+  updateIdeasBadge();
 }
 
 // =============================================================================
