@@ -46,7 +46,7 @@
   .refresh-btn:disabled { opacity: .4; cursor: not-allowed; }
 
   /* ── Tabs ── */
-  .tabs-wrap { padding-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+  .tabs-wrap { padding-bottom: 20px; }
   .tabs-row { display: inline-flex; align-items: center; gap: 1px; background: var(--tabs-bg); border-radius: 13px; padding: 3px; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
   .tabs-row::-webkit-scrollbar { display: none; }
   .tab { display: inline-flex; align-items: center; gap: 6px; padding: 7px 15px; border-radius: 10px; border: none; background: transparent; color: var(--text-3); font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all .15s; user-select: none; font-family: inherit; }
@@ -451,10 +451,11 @@
   .lock-btn:hover { opacity: .85; }
   .lock-error { font-size: 12px; color: #e11d48; margin-top: 10px; min-height: 16px; }
 
-  /* ── Botón de Ideas (junto a las pestañas) ── */
-  .ideas-fab { position: relative; flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; border: none; background: linear-gradient(135deg, #ffcf5c, #f5a623); box-shadow: 0 3px 10px rgba(180,120,0,0.30); font-size: 21px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform .15s, box-shadow .15s; }
-  .ideas-fab:hover { transform: scale(1.08) rotate(-4deg); box-shadow: 0 5px 14px rgba(180,120,0,0.40); }
-  .ideas-fab-badge { position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #e11d48; color: #fff; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg); }
+  /* ── Botón de Ideas (debajo del buscador) ── */
+  .ideas-fab { position: relative; flex-shrink: 0; width: 66px; height: 66px; border-radius: 50%; border: none; background: linear-gradient(135deg, #ffcf5c, #f5a623); box-shadow: 0 4px 14px rgba(180,120,0,0.30); font-size: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform .15s, box-shadow .15s; }
+  .ideas-fab:hover { transform: scale(1.08) rotate(-4deg); box-shadow: 0 6px 18px rgba(180,120,0,0.40); }
+  .ideas-fab-badge { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: #e11d48; color: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 2px solid var(--bg); }
+  .ideas-fab-label { font-size: 11px; font-weight: 700; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
 
   /* ── Panel de Ideas — estilo cuaderno espiralado ── */
   .ideas-overlay { position: fixed; inset: 0; background: rgba(30,20,10,0.45); z-index: 250; display: flex; align-items: center; justify-content: center; padding: 24px; }
@@ -470,6 +471,7 @@
   .notebook-input-row { position: relative; }
   .notebook-inp { width: 100%; border: none; background: transparent; outline: none; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 15px; color: #4a3f2c; line-height: 34px; height: 34px; padding: 0; }
   .notebook-inp::placeholder { color: #a89f8e; }
+  .notebook-edit-inp { border-bottom: 1.5px dashed #f5a623; }
   .notebook-entry { position: relative; display: flex; align-items: flex-start; gap: 12px; min-height: 34px; }
   .notebook-entry-date { flex-shrink: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 10px; font-weight: 700; color: #a89f8e; line-height: 34px; white-space: nowrap; }
   .notebook-entry-text { flex: 1; min-width: 0; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 15px; color: #4a3f2c; line-height: 34px; word-break: break-word; }
@@ -510,10 +512,17 @@
       <div class="header-date" id="header-date"></div>
       <h1>Panel de <em>Tareas</em></h1>
     </div>
-    <div style="display:flex;align-items:center;gap:10px">
-      <div class="search-wrap">
-        <input class="search-inp" id="global-search" placeholder="🔍 Buscar tareas…" oninput="runGlobalSearch()" onfocus="runGlobalSearch()" onkeydown="if(event.key==='Escape'){this.value='';closeSearch();this.blur()}" autocomplete="off">
-        <div class="search-panel" id="search-panel" style="display:none"></div>
+    <div style="display:flex;align-items:flex-start;gap:10px">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+        <div class="search-wrap">
+          <input class="search-inp" id="global-search" placeholder="🔍 Buscar tareas…" oninput="runGlobalSearch()" onfocus="runGlobalSearch()" onkeydown="if(event.key==='Escape'){this.value='';closeSearch();this.blur()}" autocomplete="off">
+          <div class="search-panel" id="search-panel" style="display:none"></div>
+        </div>
+        <button class="ideas-fab" id="ideas-fab" onclick="showIdeas()" title="Espacio para ideas sueltas">
+          💡
+          <span class="ideas-fab-badge" id="ideas-fab-badge" style="display:none"></span>
+        </button>
+        <span class="ideas-fab-label">Espacio de Ideas</span>
       </div>
       <button class="backup-btn" onclick="exportBackup()" title="Descarga un archivo JSON con todas tus tareas, delegaciones, desgloses y foco — guardalo como copia de seguridad">⬇ Respaldo</button>
       <button class="backup-btn" onclick="document.getElementById('import-file-inp').click()" title="Restaura tus datos desde un respaldo JSON descargado previamente (reemplaza los datos actuales)">⬆ Restaurar</button>
@@ -533,10 +542,6 @@
       <button class="tab"        id="tab-desglose"      onclick="switchTab('desglose')">📋 Desglose <span class="tab-badge" id="badge-desglose"></span></button>
       <button class="tab"        id="tab-completed" onclick="switchTab('completed')">✓ Completadas <span class="tab-badge" id="badge-completed"></span></button>
     </div>
-    <button class="ideas-fab" id="ideas-fab" onclick="showIdeas()" title="Espacio para ideas sueltas">
-      💡
-      <span class="ideas-fab-badge" id="ideas-fab-badge" style="display:none"></span>
-    </button>
   </div>
 </div>
 
@@ -726,6 +731,7 @@ let vencEditId      = null; // id de tarea con date-picker abierto en Vencimient
 let delaFollowEditId = null; // id de tarea con date-picker de seguimiento abierto en Delegadas
 let delaDateEditId   = null; // id de tarea con date-picker de fecha de delegación abierto
 let ideas            = JSON.parse(localStorage.getItem('sm_ideas_v1') || '[]');
+let editIdeaId       = null; // id de idea en modo edición dentro del cuaderno
 // migrate old today:true → day:'hoy'
 tasks = tasks.map(t => { if (t.today === true && !t.day) { t.day = 'hoy'; } return t; });
 // migrate: tareas delegadas sin fecha de delegación → usar createdAt como referencia
@@ -841,10 +847,19 @@ function renderIdeas() {
     html += '<div class="notebook-empty">Todavía no hay ideas anotadas. Escribí la primera arriba y apretá Enter.</div>';
   } else {
     html += sorted.map(function(it) {
+      if (editIdeaId === it.id) {
+        return '<div class="notebook-entry">'
+          + '<div class="notebook-entry-date">' + ideaDateLabel(it.createdAt) + '</div>'
+          + '<input class="notebook-inp notebook-edit-inp" id="idea-edit-inp" value="' + esc(it.text) + '"'
+          + ' onkeydown="if(event.key===\'Enter\')saveIdeaEdit(\'' + it.id + '\');if(event.key===\'Escape\')cancelIdeaEdit()"'
+          + ' onblur="saveIdeaEdit(\'' + it.id + '\')">'
+          + '</div>';
+      }
       return '<div class="notebook-entry">'
         + '<div class="notebook-entry-date">' + ideaDateLabel(it.createdAt) + '</div>'
         + '<div class="notebook-entry-text">' + esc(it.text) + '</div>'
         + '<div class="notebook-entry-actions">'
+        + '<button class="notebook-entry-btn" onclick="startEditIdea(\'' + it.id + '\')" title="Editar">✏️</button>'
         + '<button class="notebook-entry-btn" onclick="convertIdeaToTask(\'' + it.id + '\')" title="Convertir en tarea">→ Tarea</button>'
         + '<button class="notebook-entry-btn del" onclick="deleteIdea(\'' + it.id + '\')" title="Eliminar">✕</button>'
         + '</div>'
@@ -853,6 +868,35 @@ function renderIdeas() {
   }
 
   el.innerHTML = html;
+
+  if (editIdeaId) {
+    setTimeout(function(){
+      const inp = document.getElementById('idea-edit-inp');
+      if (inp) { inp.focus(); inp.select(); }
+    }, 30);
+  }
+}
+
+function startEditIdea(id) {
+  editIdeaId = id;
+  renderIdeas();
+}
+
+function saveIdeaEdit(id) {
+  const inp = document.getElementById('idea-edit-inp');
+  const it  = ideas.find(function(x){ return x.id === id; });
+  if (it && inp) {
+    const val = (inp.value || '').trim();
+    if (val) it.text = val;
+  }
+  editIdeaId = null;
+  saveIdeas();
+  renderIdeas();
+}
+
+function cancelIdeaEdit() {
+  editIdeaId = null;
+  renderIdeas();
 }
 
 function addIdea() {
