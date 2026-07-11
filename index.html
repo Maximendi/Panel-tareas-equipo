@@ -576,6 +576,8 @@
       <button class="task-filter active" id="tf-todas"        onclick="setTaskFilter('todas')">☑ Todas</button>
       <button class="task-filter"        id="tf-delegadas"    onclick="setTaskFilter('delegadas')">🤝 Delegadas <span class="tab-badge" id="badge-delegadas"></span></button>
       <button class="task-filter"        id="tf-vencimientos" onclick="setTaskFilter('vencimientos')">⏰ Vencimientos <span class="tab-badge" id="badge-vencimientos"></span></button>
+      <button class="task-filter"        id="tf-revision"     onclick="setTaskFilter('revision')">🔍 Revisión <span class="tab-badge" id="badge-revision"></span></button>
+      <button class="task-filter"        id="tf-seguimiento"  onclick="setTaskFilter('seguimiento')">👁 Seguimiento <span class="tab-badge" id="badge-seguimiento"></span></button>
       <button class="task-filter" style="margin-left:auto" onclick="exportTasksExcel()" title="Descargar un reporte Excel con todas las tareas">📊 Exportar Excel</button>
     </div>
     <div id="task-form-container" style="display:none"></div>
@@ -617,6 +619,8 @@
 
     <div id="delegadas-content" style="display:none"></div>
     <div id="vencimientos-content" style="display:none"></div>
+    <div id="revision-content" style="display:none"></div>
+    <div id="seguimiento-content" style="display:none"></div>
   </div>
 
   <!-- Foco pane -->
@@ -662,7 +666,7 @@
 
     <div class="help-section" style="border-left-color:#16a34a">
       <div class="help-section-title">☑ Mis Tareas</div>
-      <div class="help-section-text">Gestión de tareas propias organizadas por urgencia: <strong>Urgente</strong>, <strong>Corto Plazo</strong> y <strong>Mediano Plazo</strong>. Cada tarea tiene esfuerzo (Alto/Medio/Bajo) y se puede planificar para cualquier día de la semana. Al tildar, la tarea se archiva en Completadas. Con los filtros <strong>🤝 Delegadas</strong> y <strong>⏰ Vencimientos</strong> ves las tareas delegadas agrupadas por persona — con antigüedad de la delegación y fecha de seguimiento — y las tareas ordenadas por fecha de vencimiento. El botón <strong>📋 Desglosar</strong> crea un desglose vinculado a la tarea: los pasos se gestionan solo en la pestaña Desglose, y la tarea muestra un indicador con el avance (clic para ir al desglose). Con <strong>📊 Exportar Excel</strong> descargás un reporte .xlsx profesional con todas las tareas pendientes y su detalle completo.</div>
+      <div class="help-section-text">Gestión de tareas propias organizadas por urgencia: <strong>Urgente</strong>, <strong>Corto Plazo</strong> y <strong>Mediano Plazo</strong>. Cada tarea tiene esfuerzo (Alto/Medio/Bajo), se le puede asociar un <strong>Cliente</strong>, y se puede planificar para cualquier día de la semana. Al tildar, la tarea se archiva en Completadas. Con los filtros <strong>🤝 Delegadas</strong> y <strong>⏰ Vencimientos</strong> ves las tareas delegadas agrupadas por persona — con antigüedad de la delegación y fecha de seguimiento — y las tareas ordenadas por fecha de vencimiento. Los filtros <strong>🔍 Revisión</strong> y <strong>👁 Seguimiento</strong> agrupan las tareas marcadas con esos checks (al cargarlas o editarlas, o con los botones rápidos en cada tarea) — útiles para el trabajo de revisar y hacer seguimiento del equipo. El botón <strong>📋 Desglosar</strong> crea un desglose vinculado a la tarea: los pasos se gestionan solo en la pestaña Desglose, y la tarea muestra un indicador con el avance (clic para ir al desglose). Con <strong>📊 Exportar Excel</strong> descargás un reporte .xlsx profesional con todas las tareas pendientes y su detalle completo.</div>
     </div>
 
     <div class="help-section" style="border-left-color:#0891b2">
@@ -781,6 +785,8 @@ function switchTab(name) {
   if (name === 'tasks') {
     if (taskFilter === 'delegadas')    renderDelegadas();
     if (taskFilter === 'vencimientos') renderVencimientos();
+    if (taskFilter === 'revision')     renderRevision();
+    if (taskFilter === 'seguimiento')  renderSeguimiento();
   }
 }
 
@@ -788,15 +794,19 @@ function switchTab(name) {
 let taskFilter = 'todas'; // 'todas' | 'delegadas' | 'vencimientos'
 function setTaskFilter(f) {
   taskFilter = f;
-  ['todas','delegadas','vencimientos'].forEach(x => {
+  ['todas','delegadas','vencimientos','revision','seguimiento'].forEach(x => {
     const btn = document.getElementById('tf-'+x);
     if (btn) btn.className = 'task-filter' + (x===f?' active':'');
   });
   document.getElementById('tasks-view-todas').style.display     = f==='todas'        ? 'block' : 'none';
   document.getElementById('delegadas-content').style.display    = f==='delegadas'    ? 'block' : 'none';
   document.getElementById('vencimientos-content').style.display = f==='vencimientos' ? 'block' : 'none';
+  document.getElementById('revision-content').style.display     = f==='revision'     ? 'block' : 'none';
+  document.getElementById('seguimiento-content').style.display  = f==='seguimiento'  ? 'block' : 'none';
   if (f === 'delegadas')    renderDelegadas();
   if (f === 'vencimientos') renderVencimientos();
+  if (f === 'revision')     renderRevision();
+  if (f === 'seguimiento')  renderSeguimiento();
 }
 
 
@@ -919,7 +929,7 @@ function deleteIdea(id) {
 function convertIdeaToTask(id) {
   const it = ideas.find(function(x){ return x.id === id; });
   if (!it) return;
-  tasks.push({ id: genId(), title: it.text, cliente: null, urgency: 'medium', effort: 'medium', notes: '', dueDate: null, delegated: false, delegatedTo: null, horas: null, done: false, day: null, createdAt: new Date().toISOString() });
+  tasks.push({ id: genId(), title: it.text, cliente: null, urgency: 'medium', effort: 'medium', notes: '', dueDate: null, revision: false, seguimiento: false, delegated: false, delegatedTo: null, horas: null, done: false, day: null, createdAt: new Date().toISOString() });
   ideas = ideas.filter(function(x){ return x.id !== id; });
   saveIdeas();
   saveTasks();
@@ -1125,12 +1135,16 @@ function saveTasks() {
   if (activeTab === 'completed') renderCompleted();
   if (taskFilter === 'vencimientos') renderVencimientos();
   if (taskFilter === 'delegadas')    renderDelegadas();
+  if (taskFilter === 'revision')     renderRevision();
+  if (taskFilter === 'seguimiento')  renderSeguimiento();
   updateTaskBadge();
   updateHoyBadge();
   updateSemanaBadge();
   updateCompletedBadge();
   updateVencimientosBadge();
   updateDelegadasBadge();
+  updateRevisionBadge();
+  updateSeguimientoBadge();
   updateStatusCounts();
 }
 
@@ -1208,6 +1222,10 @@ function renderTaskCard(t) {
   const _delaBtnCls = t.delegated ? 'dela-toggle on' : 'dela-toggle';
   const _delaBtn    = '<button class="' + _delaBtnCls + '" onclick="toggleDelegated(\'' + t.id + '\')" title="' + (t.delegated?'Quitar delegación':'Delegar tarea') + '">🤝 ' + (t.delegated?'Delegada':'Delegar') + '</button>';
 
+  // Botones toggle de Revisión / Seguimiento
+  const _revBtn = '<button class="' + (t.revision ? 'dela-toggle on' : 'dela-toggle') + '" onclick="toggleRevision(\'' + t.id + '\')" title="' + (t.revision ? 'Quitar marca de revisión' : 'Marcar que requiere revisión') + '">🔍 Revisión</button>';
+  const _segBtn = '<button class="' + (t.seguimiento ? 'dela-toggle on' : 'dela-toggle') + '" onclick="toggleSeguimiento(\'' + t.id + '\')" title="' + (t.seguimiento ? 'Quitar marca de seguimiento' : 'Marcar que requiere seguimiento') + '">👁 Seguimiento</button>';
+
   // Barra de avance interactiva (bar + input numérico)
   var _hasProgress = t.progress !== null && t.progress !== undefined;
   let _progressFull = '';
@@ -1267,6 +1285,8 @@ function renderTaskCard(t) {
       ${_horasBadge}
       <div class="day-btns">${dayBtns}</div>
       ${_delaBtn}
+      ${_revBtn}
+      ${_segBtn}
       ${_dsgBtn}
       ${_progBtn}
       <div class="task-actions">
@@ -1592,6 +1612,16 @@ function showTaskFormToday() {
       <label>Tiempo estimado (horas, opcional)</label>
       <input id="f-horas" type="text" inputmode="decimal" placeholder="Ej: 2 o 1,5" />
     </div>
+    <div class="form-row" style="margin-top:12px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="f-revision">
+        <span>🔍 Requiere Revisión</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="f-seguimiento">
+        <span>👁 Requiere Seguimiento</span>
+      </label>
+    </div>
     <div class="form-group" style="margin-top:12px">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
         <input type="checkbox" id="f-delegated" onchange="document.getElementById('f-dela-row').style.display=this.checked?'block':'none'">
@@ -1755,6 +1785,16 @@ function showTaskForm(taskOrUrgency=null) {
       <label>Tiempo estimado (horas, opcional)</label>
       <input id="f-horas" type="text" inputmode="decimal" placeholder="Ej: 2 o 1,5" value="${task?.horas !== null && task?.horas !== undefined ? esc(String(task.horas)) : ''}" />
     </div>
+    <div class="form-row" style="margin-top:12px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="f-revision" ${task?.revision?'checked':''}>
+        <span>🔍 Requiere Revisión</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="f-seguimiento" ${task?.seguimiento?'checked':''}>
+        <span>👁 Requiere Seguimiento</span>
+      </label>
+    </div>
     <div class="form-group" style="margin-top:12px">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
         <input type="checkbox" id="f-delegated" ${task?.delegated?'checked':''} onchange="document.getElementById('f-dela-row').style.display=this.checked?'block':'none'">
@@ -1800,6 +1840,8 @@ function submitTaskForm() {
   const effort      = document.getElementById('f-effort').value;
   const notes       = (document.getElementById('f-notes')?.value||'').trim();
   const dueDate     = (document.getElementById('f-duedate')?.value||'').trim() || null;
+  const revision    = document.getElementById('f-revision')?.checked || false;
+  const seguimiento = document.getElementById('f-seguimiento')?.checked || false;
   const delegated   = document.getElementById('f-delegated')?.checked || false;
   const delegatedTo = delegated ? ((document.getElementById('f-delegated-to')?.value||'').trim() || null) : null;
 
@@ -1821,7 +1863,7 @@ function submitTaskForm() {
   if (editingTaskId) {
     const t = tasks.find(x=>x.id===editingTaskId);
     if (t) {
-      Object.assign(t, {title,cliente,urgency,effort,notes,dueDate,delegated,delegatedTo,horas});
+      Object.assign(t, {title,cliente,urgency,effort,notes,dueDate,revision,seguimiento,delegated,delegatedTo,horas});
       if (delegated) {
         t.delegatedAt = delegatedAt || t.delegatedAt || new Date().toISOString();
       } else {
@@ -1830,7 +1872,7 @@ function submitTaskForm() {
       }
     }
   } else {
-    tasks.push({id:genId(),title,cliente,urgency,effort,notes,dueDate,delegated,delegatedTo,horas,delegatedAt:delegated?(delegatedAt||new Date().toISOString()):null,done:false,day:addingToHoy?'hoy':null,createdAt:new Date().toISOString()});
+    tasks.push({id:genId(),title,cliente,urgency,effort,notes,dueDate,revision,seguimiento,delegated,delegatedTo,horas,delegatedAt:delegated?(delegatedAt||new Date().toISOString()):null,done:false,day:addingToHoy?'hoy':null,createdAt:new Date().toISOString()});
   }
   saveTasks();
   cancelTaskForm();
@@ -1857,6 +1899,20 @@ function toggleDelegated(taskId) {
   if (t.delegated && !t.delegatedTo) {
     setTimeout(function(){ editDelegateName(taskId); }, 60);
   }
+}
+
+function toggleRevision(taskId) {
+  var t = tasks.find(function(x){ return x.id === taskId; });
+  if (!t) return;
+  t.revision = !t.revision;
+  saveTasks();
+}
+
+function toggleSeguimiento(taskId) {
+  var t = tasks.find(function(x){ return x.id === taskId; });
+  if (!t) return;
+  t.seguimiento = !t.seguimiento;
+  saveTasks();
 }
 
 function editDelegateName(taskId) {
@@ -2320,6 +2376,44 @@ function renderVencimientos() {
       if (inp) inp.focus();
     }, 40);
   }
+}
+
+// =============================================================================
+// REVISIÓN Y SEGUIMIENTO
+// =============================================================================
+
+function updateRevisionBadge() {
+  var n = tasks.filter(function(t){ return t.revision && !t.done; }).length;
+  var el = document.getElementById('badge-revision');
+  if (el) el.textContent = n ? n : '';
+}
+
+function updateSeguimientoBadge() {
+  var n = tasks.filter(function(t){ return t.seguimiento && !t.done; }).length;
+  var el = document.getElementById('badge-seguimiento');
+  if (el) el.textContent = n ? n : '';
+}
+
+function renderRevision() {
+  var el = document.getElementById('revision-content');
+  if (!el) return;
+  var list = tasks.filter(function(t){ return t.revision && !t.done; });
+  if (!list.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><h3>Sin tareas para revisar</h3><p>Usá el botón "🔍 Revisión" en cualquier tarea de Mis Tareas para marcarla, o tildá la casilla al cargarla.</p></div>';
+    return;
+  }
+  el.innerHTML = list.map(renderTaskCard).join('');
+}
+
+function renderSeguimiento() {
+  var el = document.getElementById('seguimiento-content');
+  if (!el) return;
+  var list = tasks.filter(function(t){ return t.seguimiento && !t.done; });
+  if (!list.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">👁</div><h3>Sin tareas en seguimiento</h3><p>Usá el botón "👁 Seguimiento" en cualquier tarea de Mis Tareas para marcarla, o tildá la casilla al cargarla.</p></div>';
+    return;
+  }
+  el.innerHTML = list.map(renderTaskCard).join('');
 }
 
 function openVencEdit(taskId) {
@@ -3037,7 +3131,9 @@ function runGlobalSearch() {
             t.cliente ? ('🏢 ' + t.cliente) : '',
             URGENCY[t.urgency] ? URGENCY[t.urgency].label : '',
             t.delegated ? ('🤝 ' + (t.delegatedTo || 'delegada')) : '',
-            t.dueDate ? ('📅 ' + dueDateLabel(t.dueDate)) : ''
+            t.dueDate ? ('📅 ' + dueDateLabel(t.dueDate)) : '',
+            t.revision ? '🔍 Revisión' : '',
+            t.seguimiento ? '👁 Seguimiento' : ''
           ].filter(Boolean).join(' · ');
           var tab = t.day ? (t.day === 'hoy' ? 'hoy' : 'semana') : 'tasks';
           return '<button class="search-hit" onclick="searchGoto(\'' + tab + '\')">'
@@ -3143,11 +3239,14 @@ function reloadStateFromStorage() {
   renderFocoSemanal();
   renderDelegadas();
   renderVencimientos();
+  renderRevision();
+  renderSeguimiento();
   if (activeTab === 'semana')    renderSemana();
   if (activeTab === 'completed') renderCompleted();
   if (activeTab === 'desglose')  renderDesglose();
   updateTaskBadge(); updateHoyBadge(); updateSemanaBadge(); updateCompletedBadge();
   updateDesgloseBadge(); updateVencimientosBadge(); updateDelegadasBadge(); updateFocoBadge();
+  updateRevisionBadge(); updateSeguimientoBadge();
   updateStatusCounts();
   updateIdeasBadge();
   if (document.getElementById('ideas-overlay')?.style.display === 'flex') renderIdeas();
@@ -3234,8 +3333,8 @@ function exportTasksExcel() {
   var pendientes = tasks.filter(function(t){ return !t.done; });
   if (!pendientes.length) { alert('No hay tareas pendientes para exportar.'); return; }
 
-  var HEADERS = ['Título','Cliente','Urgencia','Esfuerzo','Día asignado','Vencimiento','Delegada a','Fecha delegación','Seguimiento','Avance','Desglose','Notas','Creada'];
-  var COL_W  = [46, 22, 14, 11, 13, 13, 18, 16, 13, 9, 13, 42, 11];
+  var HEADERS = ['Título','Cliente','Revisión','En seguimiento','Urgencia','Esfuerzo','Día asignado','Vencimiento','Delegada a','Fecha delegación','Fecha seguimiento delegación','Avance','Desglose','Notas','Creada'];
+  var COL_W  = [46, 22, 10, 14, 14, 11, 13, 13, 18, 16, 16, 9, 13, 42, 11];
 
   function fdate(iso) {
     if (!iso) return '';
@@ -3288,17 +3387,19 @@ function exportTasksExcel() {
     var r = '<row r="' + rowNum + '">';
     r += cell(0, t.title, base);
     r += cell(1, t.cliente || '', base);
-    r += cell(2, URGENCY[t.urgency] ? URGENCY[t.urgency].label : '', base);
-    r += cell(3, t.effort === 'high' ? 'Alto' : t.effort === 'low' ? 'Bajo' : 'Medio', base);
-    r += cell(4, diaLbl, base);
-    r += cell(5, fymd(t.dueDate), base);
-    r += cell(6, t.delegated ? (t.delegatedTo || 'Sin asignar') : '', base);
-    r += cell(7, t.delegated ? fdate(t.delegatedAt) : '', base);
-    r += cell(8, t.delegated ? fymd(t.followUpDate) : '', base);
-    r += cell(9, (t.progress !== null && t.progress !== undefined) ? (t.progress + '%') : '', base);
-    r += cell(10, dsg, base);
-    r += cell(11, t.notes || '', base);
-    r += cell(12, fdate(t.createdAt), base);
+    r += cell(2, t.revision ? 'Sí' : '', base);
+    r += cell(3, t.seguimiento ? 'Sí' : '', base);
+    r += cell(4, URGENCY[t.urgency] ? URGENCY[t.urgency].label : '', base);
+    r += cell(5, t.effort === 'high' ? 'Alto' : t.effort === 'low' ? 'Bajo' : 'Medio', base);
+    r += cell(6, diaLbl, base);
+    r += cell(7, fymd(t.dueDate), base);
+    r += cell(8, t.delegated ? (t.delegatedTo || 'Sin asignar') : '', base);
+    r += cell(9, t.delegated ? fdate(t.delegatedAt) : '', base);
+    r += cell(10, t.delegated ? fymd(t.followUpDate) : '', base);
+    r += cell(11, (t.progress !== null && t.progress !== undefined) ? (t.progress + '%') : '', base);
+    r += cell(12, dsg, base);
+    r += cell(13, t.notes || '', base);
+    r += cell(14, fdate(t.createdAt), base);
     r += '</row>';
     rowsXml += r;
     rowNum++;
@@ -3314,7 +3415,7 @@ function exportTasksExcel() {
     + '<sheetFormatPr defaultRowHeight="16"/>'
     + colsXml
     + '<sheetData>' + rowsXml + '</sheetData>'
-    + '<mergeCells count="2"><mergeCell ref="A1:M1"/><mergeCell ref="A2:M2"/></mergeCells>'
+    + '<mergeCells count="2"><mergeCell ref="A1:O1"/><mergeCell ref="A2:O2"/></mergeCells>'
     + '</worksheet>';
 
   var stylesXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -3436,6 +3537,8 @@ function bootApp() {
   updateDesgloseBadge();
   updateVencimientosBadge();
   updateDelegadasBadge();
+  updateRevisionBadge();
+  updateSeguimientoBadge();
   updateFocoBadge();
   updateStatusCounts();
   updateIdeasBadge();
