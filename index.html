@@ -147,6 +147,8 @@
 
   /* ── Task items (inside urgency card) ── */
   .task-item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); position: relative; }
+  .search-highlight { animation: searchFlash 1.8s ease; }
+  @keyframes searchFlash { 0%,20% { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 10px; } 100% { outline: 3px solid transparent; outline-offset: 3px; } }
   .task-accent { width: 3px; border-radius: 2px; align-self: stretch; flex-shrink: 0; min-height: 32px; }
   .task-check { width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--border); cursor: pointer; flex-shrink: 0; transition: all .15s; background: transparent; }
   .task-check:hover { border-color: var(--accent); background: var(--accent-lt); }
@@ -1268,7 +1270,7 @@ function renderTaskCard(t) {
   const dayBtns = ['hoy','lunes','martes','miercoles','jueves','viernes'].map(d =>
     `<button class="day-btn${t.day===d?(d==='hoy'?' day-hoy':' day-week'):''}" onclick="setTaskDay('${t.id}','${d}')">${DAY_LABELS[d]}</button>`
   ).join('');
-  return `<div class="task-item">
+  return `<div class="task-item" id="task-${t.id}">
     <div class="task-accent" style="background:${uc}"></div>
     <div class="task-check" onclick="completeTask('${t.id}')"></div>
     <div class="task-info">
@@ -1442,7 +1444,7 @@ function renderHoy() {
       var noteHtml = t.dayNote
         ? '<span class="day-note" onclick="editDayNote(\'' + t.id + '\')">' + esc(t.dayNote) + '</span>'
         : '<button class="day-note-add" onclick="editDayNote(\'' + t.id + '\')">＋ nota del día</button>';
-      html += '<div class="' + itemCls + '">'
+      html += '<div class="' + itemCls + '" id="task-' + t.id + '">'
         + '<div class="hoy-task-check" onclick="completeTask(\'' + t.id + '\')" style="margin-top:4px"></div>'
         + '<div style="flex:1;min-width:0">'
         + (t.cliente ? '<div class="task-client-kicker">🏢 ' + esc(t.cliente) + '</div>' : '')
@@ -1499,7 +1501,7 @@ function renderSemana() {
           : `<button class="day-note-add" onclick="editDayNote('${t.id}')">＋ nota del día</button>`;
         const dsgPillSem = desglosePillHtml(t);
         const horasPillSem = taskHorasPill(t);
-        return `<div class="semana-task">
+        return `<div class="semana-task" id="task-${t.id}">
           <div style="width:3px;border-radius:2px;align-self:stretch;min-height:24px;flex-shrink:0;background:${uc}"></div>
           <div class="semana-task-check" onclick="completeTask('${t.id}')"></div>
           <div class="semana-task-info">
@@ -2167,7 +2169,7 @@ function renderDelegadas() {
         fuPill = '<span class="pill" style="background:var(--bg);color:var(--text-3);border:1px dashed var(--border);cursor:pointer" onclick="editFollowUp(\'' + t.id + '\')" title="Definir fecha de seguimiento">🔔 ＋ seguimiento</span>';
       }
 
-      html += '<div class="task-item">'
+      html += '<div class="task-item" id="task-' + t.id + '">'
         + '<div class="task-accent" style="background:' + uc + '"></div>'
         + '<div class="task-check" onclick="completeTask(\'' + t.id + '\')"></div>'
         + '<div class="task-info">'
@@ -2324,7 +2326,7 @@ function renderVencimientos() {
       : 'font-size:11px;font-weight:600;color:var(--text-3);background:transparent;border:1px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;white-space:nowrap';
     var _progToggle = '<button style="' + _progBtnStyle + '" onclick="toggleTaskProgress(\'' + t.id + '\')" title="' + (_hasProgress ? 'Desactivar indicador de avance' : 'Activar indicador de avance') + '">📊 Avance</button>';
 
-    return '<div class="task-item">'
+    return '<div class="task-item" id="task-' + t.id + '">'
       + '<div class="task-accent" style="background:' + accentColor + '"></div>'
       + '<div class="task-check" onclick="completeTask(\'' + t.id + '\')"></div>'
       + '<div class="task-info">'
@@ -3096,6 +3098,20 @@ function searchGoto(tab) {
   switchTab(tab);
 }
 
+// Va a una tarea específica desde el buscador: cambia de pestaña/filtro y hace scroll + resalta la fila
+function goToTask(id, tab) {
+  closeSearch();
+  if (tab === 'tasks') setTaskFilter('todas');
+  switchTab(tab);
+  setTimeout(function() {
+    var el = document.getElementById('task-' + id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('search-highlight');
+    setTimeout(function() { el.classList.remove('search-highlight'); }, 1800);
+  }, 60);
+}
+
 function searchGotoDesglose(id) {
   selectedDesgloseId = id;
   closeSearch();
@@ -3136,7 +3152,7 @@ function runGlobalSearch() {
             t.seguimiento ? '👁 Seguimiento' : ''
           ].filter(Boolean).join(' · ');
           var tab = t.day ? (t.day === 'hoy' ? 'hoy' : 'semana') : 'tasks';
-          return '<button class="search-hit" onclick="searchGoto(\'' + tab + '\')">'
+          return '<button class="search-hit" onclick="goToTask(\'' + t.id + '\',\'' + tab + '\')">'
             + '<div class="search-hit-title">' + esc(t.title) + '</div>'
             + '<div class="search-hit-sub">' + esc(where + (extra ? ' · ' + extra : '')) + '</div>'
             + '</button>';
