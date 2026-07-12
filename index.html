@@ -2869,8 +2869,51 @@ function dsgNodeMeta(desgloseId, stepId, subId, node) {
     h += '<button class="dsg-chip" onclick="editNodeHoras(' + args + ')">⏱ Tiempo estimado</button>';
   }
 
+  // Avance (solo pasos)
+  var hasNodeProgress = !subId && node.progress !== null && node.progress !== undefined;
+  if (!subId) {
+    h += '<button class="dsg-chip' + (hasNodeProgress ? ' time' : '') + '" onclick="toggleNodeProgress(' + args + ')" title="' + (hasNodeProgress ? 'Desactivar indicador de avance' : 'Registrar avance del paso') + '">📊 Avance</button>';
+  }
+
   h += '</div>';
+
+  if (hasNodeProgress) {
+    var _npct = Math.max(0, Math.min(100, node.progress || 0));
+    var _npColor = _npct >= 80 ? '#16a34a' : _npct >= 50 ? '#d97706' : '#cc5a3a';
+    h += '<div style="display:flex;align-items:center;gap:6px;padding:2px 0 8px 56px">'
+      + '<div style="flex:1;max-width:160px;height:5px;background:var(--border);border-radius:3px;overflow:hidden">'
+      + '<div data-dsg-bar="' + key + '" style="height:100%;width:' + _npct + '%;background:' + _npColor + ';border-radius:3px;transition:width .3s"></div>'
+      + '</div>'
+      + '<input type="number" min="0" max="100" value="' + _npct + '"'
+      + ' style="width:44px;padding:2px 4px;border:1px solid var(--border);border-radius:5px;font-size:10px;font-family:inherit;background:var(--surface);color:var(--text);text-align:center;outline:none;font-weight:700"'
+      + ' onchange="setNodeProgress(' + args + ', this.value)"'
+      + ' oninput="updateNodeProgressBar(\'' + key + '\', this.value)"'
+      + '>%'
+      + '</div>';
+  }
+
   return h;
+}
+
+function toggleNodeProgress(desgloseId, stepId, subId) {
+  var found = dsgFindNode(desgloseId, stepId, subId);
+  if (!found) return;
+  found.node.progress = (found.node.progress !== null && found.node.progress !== undefined) ? null : 0;
+  saveDesgloses();
+}
+
+function setNodeProgress(desgloseId, stepId, subId, value) {
+  var found = dsgFindNode(desgloseId, stepId, subId);
+  if (!found) return;
+  found.node.progress = Math.max(0, Math.min(100, parseInt(value) || 0));
+  saveDesgloses();
+}
+
+function updateNodeProgressBar(key, value) {
+  var pct = Math.max(0, Math.min(100, parseInt(value) || 0));
+  var c = pct >= 80 ? '#16a34a' : pct >= 50 ? '#d97706' : '#cc5a3a';
+  var bar = document.querySelector('[data-dsg-bar="' + key + '"]');
+  if (bar) { bar.style.width = pct + '%'; bar.style.background = c; }
 }
 
 function editNodeDeleg(desgloseId, stepId, subId) {
