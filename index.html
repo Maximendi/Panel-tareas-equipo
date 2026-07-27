@@ -658,7 +658,7 @@
 
     <div class="help-section" style="border-left-color:var(--accent)">
       <div class="help-section-title">⊞ Hoy</div>
-      <div class="help-section-text">Tu espacio de foco del día, minimalista: solo las tareas que marcaste con <strong>Hoy</strong>. Arriba podés anotar la <strong>intención del día</strong> y ver la barra de progreso. Ordenás los ítems con ↑↓, y el modo <strong>🎯 Una a la vez</strong> resalta solo la primera tarea pendiente. Las completadas quedan tachadas hasta fin del día. Si cargás más de 5 ítems, el panel te sugiere redistribuir.</div>
+      <div class="help-section-text">Tu espacio de foco del día, minimalista: solo las tareas que marcaste con <strong>Hoy</strong>, y los pasos de un desglose que marques con <strong>📌 Foco del día</strong> (chip disponible en cada paso, dentro de la pestaña Desglose). Arriba podés anotar la <strong>intención del día</strong> y ver la barra de progreso. Ordenás los ítems con ↑↓, y el modo <strong>🎯 Una a la vez</strong> resalta solo el primero pendiente. Los completados quedan tachados hasta fin del día. Si cargás más de 5 ítems, el panel te sugiere redistribuir.</div>
     </div>
 
     <div class="help-section" style="border-left-color:#2563eb">
@@ -1160,9 +1160,7 @@ function updateTaskBadge() {
 }
 
 function updateHoyBadge() {
-  const wk = getTodayWeekKey();
-  const taskCount = tasks.filter(t => !t.done && (t.day === 'hoy' || (wk && t.day === wk))).length;
-  document.getElementById('badge-hoy').textContent = taskCount;
+  document.getElementById('badge-hoy').textContent = getHoyPendingItems().length;
 }
 
 function updateSemanaBadge() {
@@ -1305,12 +1303,13 @@ function renderTaskCard(t) {
 function getHoyExtras() {
   var today = todayKey();
   if (hoyExtras.date !== today) {
-    hoyExtras = { date: today, intent: '', order: [], doneTasks: [], doneEmails: [], focus: !!hoyExtras.focus };
+    hoyExtras = { date: today, intent: '', order: [], doneTasks: [], doneEmails: [], doneSteps: [], focus: !!hoyExtras.focus };
     saveHoyExtras();
   }
   if (!hoyExtras.order)      hoyExtras.order = [];
   if (!hoyExtras.doneTasks)  hoyExtras.doneTasks = [];
   if (!hoyExtras.doneEmails) hoyExtras.doneEmails = [];
+  if (!hoyExtras.doneSteps)  hoyExtras.doneSteps = [];
   return hoyExtras;
 }
 
@@ -1318,13 +1317,18 @@ function saveHoyExtras() {
   localStorage.setItem('sm_hoy_extras_v1', JSON.stringify(hoyExtras));
 }
 
-// Ítems pendientes de hoy (tareas), ordenados según el orden manual guardado
+// Ítems pendientes de hoy (tareas + pasos de desglose marcados como Foco del día), ordenados según el orden manual guardado
 function getHoyPendingItems() {
   var wk = getTodayWeekKey();
   var hx = getHoyExtras();
   var items = [];
   tasks.filter(function(t){ return !t.done && (t.day === 'hoy' || (wk && t.day === wk)); })
        .forEach(function(t){ items.push({ key: 't:' + t.id, type: 'task', obj: t }); });
+  desgloses.filter(function(d){ return !d.done; })
+    .forEach(function(d){
+      (d.steps || []).filter(function(s){ return s.focoHoy && !s.done; })
+        .forEach(function(s){ items.push({ key: 'p:' + s.id, type: 'step', obj: s, desgloseId: d.id, desgloseTitle: d.title }); });
+    });
   return items.slice().sort(function(a, b) {
     var ia = hx.order.indexOf(a.key), ib = hx.order.indexOf(b.key);
     if (ia === -1 && ib === -1) return 0;
@@ -1384,8 +1388,15 @@ function renderHoy() {
 
   // Completadas hoy (persisten tachadas hasta fin del día)
   const doneTasksList  = hx.doneTasks.map(function(id){ return tasks.find(function(t){ return t.id === id && t.done; }); }).filter(Boolean);
+  const doneStepsList  = hx.doneSteps.map(function(id){
+    for (var i = 0; i < desgloses.length; i++) {
+      var st = (desgloses[i].steps || []).find(function(s){ return s.id === id && s.done; });
+      if (st) return { step: st, desgloseTitle: desgloses[i].title };
+    }
+    return null;
+  }).filter(Boolean);
 
-  const doneCount  = doneTasksList.length;
+  const doneCount  = doneTasksList.length + doneStepsList.length;
   const totalToday = pending.length + doneCount;
   const pct        = totalToday ? Math.round(doneCount / totalToday * 100) : 0;
 
@@ -1457,6 +1468,18 @@ function renderHoy() {
         + '<button class="task-btn" title="Quitar de Hoy" onclick="setTaskDay(\'' + t.id + '\',\'' + t.day + '\')">↩</button>'
         + '</div>'
         + '</div>';
+    } else if (item.type === 'step') {
+      var s = item.obj;
+      html += '<div class="' + itemCls + '" id="task-' + s.id + '">'
+        + '<div class="hoy-task-check" onclick="completeHoyStep(\'' + item.desgloseId + '\',\'' + s.id + '\')" style="margin-top:4px"></div>'
+        + '<div style="flex:1;min-width:0">'
+        + '<div class="task-client-kicker">📋 ' + esc(item.desgloseTitle) + '</div>'
+        + '<div class="hoy-min-title">' + esc(s.text) + '</div>'
+        + '</div>'
+        + '<div class="hoy-min-actions">' + upDown
+        + '<button class="task-btn" title="Quitar de Hoy" onclick="toggleStepFocoHoy(\'' + item.desgloseId + '\',\'' + s.id + '\')">↩</button>'
+        + '</div>'
+        + '</div>';
     }
   });
 
@@ -1467,6 +1490,12 @@ function renderHoy() {
       html += '<div class="hoy-min-item hoy-min-done" style="opacity:.55;padding:10px 16px">'
         + '<div class="hoy-task-check" style="background:#16a34a;border-color:#16a34a;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;cursor:pointer" onclick="uncompleteHoyTask(\'' + t.id + '\')" title="Desmarcar — vuelve a Hoy">✓</div>'
         + '<div style="flex:1;min-width:0"><div class="hoy-min-title" style="font-size:13px">' + esc(t.title) + '</div></div>'
+        + '</div>';
+    });
+    doneStepsList.forEach(function(x) {
+      html += '<div class="hoy-min-item hoy-min-done" style="opacity:.55;padding:10px 16px">'
+        + '<div class="hoy-task-check" style="background:#16a34a;border-color:#16a34a;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;cursor:pointer" onclick="uncompleteHoyStep(\'' + x.step.id + '\')" title="Desmarcar — vuelve a Hoy">✓</div>'
+        + '<div style="flex:1;min-width:0"><div class="hoy-min-title" style="font-size:13px">' + esc(x.step.text) + '</div></div>'
         + '</div>';
     });
   }
@@ -2502,6 +2531,7 @@ function saveDesgloses() {
   // Refrescar indicadores de desglose en las vistas de tareas
   renderTasks();
   renderHoy();
+  updateHoyBadge();
   if (activeTab === 'semana') renderSemana();
   if (taskFilter === 'delegadas')    renderDelegadas();
   if (taskFilter === 'vencimientos') renderVencimientos();
@@ -2875,6 +2905,11 @@ function dsgNodeMeta(desgloseId, stepId, subId, node) {
     h += '<button class="dsg-chip' + (hasNodeProgress ? ' time' : '') + '" onclick="toggleNodeProgress(' + args + ')" title="' + (hasNodeProgress ? 'Desactivar indicador de avance' : 'Registrar avance del paso') + '">📊 Avance</button>';
   }
 
+  // Foco del día (solo pasos)
+  if (!subId) {
+    h += '<button class="dsg-chip' + (node.focoHoy ? ' deleg' : '') + '" onclick="toggleStepFocoHoy(' + args + ')" title="' + (node.focoHoy ? 'Quitar de Hoy' : 'Sumar este paso a la pestaña Hoy') + '">📌 ' + (node.focoHoy ? 'En Foco de hoy' : 'Foco del día') + '</button>';
+  }
+
   h += '</div>';
 
   if (hasNodeProgress) {
@@ -2906,6 +2941,36 @@ function setNodeProgress(desgloseId, stepId, subId, value) {
   var found = dsgFindNode(desgloseId, stepId, subId);
   if (!found) return;
   found.node.progress = Math.max(0, Math.min(100, parseInt(value) || 0));
+  saveDesgloses();
+}
+
+function toggleStepFocoHoy(desgloseId, stepId) {
+  var d = desgloses.find(function(x){ return x.id === desgloseId; });
+  var s = d && d.steps.find(function(x){ return x.id === stepId; });
+  if (!s) return;
+  s.focoHoy = !s.focoHoy;
+  saveDesgloses();
+}
+
+// Completar un paso desde la pestaña Hoy — lo tacha y lo mantiene visible hasta fin del día
+function completeHoyStep(desgloseId, stepId) {
+  var d = desgloses.find(function(x){ return x.id === desgloseId; });
+  var s = d && d.steps.find(function(x){ return x.id === stepId; });
+  if (!s) return;
+  var hx = getHoyExtras();
+  if (hx.doneSteps.indexOf(stepId) === -1) { hx.doneSteps.push(stepId); saveHoyExtras(); }
+  s.done = true;
+  saveDesgloses();
+}
+
+function uncompleteHoyStep(stepId) {
+  for (var i = 0; i < desgloses.length; i++) {
+    var s = (desgloses[i].steps || []).find(function(x){ return x.id === stepId; });
+    if (s) { s.done = false; break; }
+  }
+  var hx = getHoyExtras();
+  var ix = hx.doneSteps.indexOf(stepId);
+  if (ix !== -1) { hx.doneSteps.splice(ix, 1); saveHoyExtras(); }
   saveDesgloses();
 }
 
@@ -3567,6 +3632,15 @@ function checkDailyReset() {
       if (t.day === 'hoy' && !t.done) { t.day = null; taskChanged = true; }
     });
     if (taskChanged) localStorage.setItem('sm_tasks_v3', JSON.stringify(tasks));
+
+    // Nuevo día → quitar el foco del día de los pasos de desglose
+    let stepsChanged = false;
+    desgloses.forEach(d => {
+      (d.steps || []).forEach(s => {
+        if (s.focoHoy && !s.done) { s.focoHoy = false; stepsChanged = true; }
+      });
+    });
+    if (stepsChanged) localStorage.setItem('sm_desglose_v1', JSON.stringify(desgloses));
   }
 
   // Siempre actualizar la fecha de última visita
