@@ -496,6 +496,8 @@
 .pres-title { font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.4; word-break: break-word; }
 .pres-detail { font-size: 12px; color: var(--text-2); line-height: 1.6; margin-top: 4px; white-space: pre-wrap; word-break: break-word; }
 .pres-date { font-size: 10px; font-weight: 600; color: var(--text-3); margin-top: 6px; }
+.pres-convert { flex-shrink: 0; align-self: center; font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: var(--radius-pill); border: 1px solid var(--border); background: var(--bg); color: var(--text-2); cursor: pointer; font-family: inherit; white-space: nowrap; transition: all .15s; }
+.pres-convert:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-lt); }
 .pres-actions { display: flex; gap: 2px; opacity: 0; transition: opacity .15s; flex-shrink: 0; }
 .pres-item:hover .pres-actions { opacity: 1; }
 
@@ -550,7 +552,7 @@
       <button class="tab"        id="tab-semana"   onclick="switchTab('semana')">📅 Semana <span class="tab-badge" id="badge-semana">0</span></button>
       <button class="tab"        id="tab-foco"      onclick="switchTab('foco')">🎯 Foco Semanal <span class="tab-badge" id="badge-foco"></span></button>
       <button class="tab"        id="tab-desglose"      onclick="switchTab('desglose')">📋 Desglose <span class="tab-badge" id="badge-desglose"></span></button>
-      <button class="tab"        id="tab-presente"  onclick="switchTab('presente')">📌 Presente <span class="tab-badge" id="badge-presente"></span></button>
+      <button class="tab"        id="tab-presente"  onclick="switchTab('presente')">🗄 Cajón de Memoria <span class="tab-badge" id="badge-presente"></span></button>
       <button class="tab"        id="tab-completed" onclick="switchTab('completed')">✓ Completadas <span class="tab-badge" id="badge-completed"></span></button>
     </div>
     <button class="ideas-fab" id="ideas-fab" onclick="showIdeas()" title="Espacio para ideas sueltas">
@@ -581,7 +583,7 @@
     <div id="desglose-content"></div>
   </div>
 
-  <!-- Presente pane -->
+  <!-- Cajón de Memoria pane -->
 <div class="tab-pane" id="pane-presente">
 <div id="presente-content"></div>
 </div>
@@ -835,7 +837,7 @@ function setTaskFilter(f) {
 
 
 // ═══════════════════════════════════════════════════════════════
-// PRESENTE — cosas a tener presente (no son tareas y no tienen vencimiento)
+// CAJÓN DE MEMORIA — cosas a tener presente (no son tareas ni tienen vencimiento); se pueden convertir en tarea
 // ═══════════════════════════════════════════════════════════════
 
 function savePresente() {
@@ -856,7 +858,7 @@ function renderPresente() {
     return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || new Date(b.createdAt) - new Date(a.createdAt);
   });
 
-  var html = '<div class="pres-intro">Cosas para tener presente: no son tareas y no tienen vencimiento.</div>'
+  var html = '<div class="pres-intro">Cajón de memoria: cosas para tener presente que no son tareas ni tienen vencimiento. Cuando alguna se vuelva accionable, pasala a Tareas con el botón “→ Tarea”.</div>'
     + '<div class="task-form">'
     + '<div class="form-group"><label>Qué quiero tener presente</label>'
     + '<input id="pres-title" placeholder="Anotá algo para tener presente…" onkeydown="if(event.key===\'Enter\')addPresente()"></div>'
@@ -866,7 +868,7 @@ function renderPresente() {
     + '</div>';
 
   if (!sorted.length) {
-    html += '<div class="empty"><div class="empty-icon">📌</div><h3>Todavía no hay nada anotado</h3><p>Escribí arriba lo que quieras tener presente y presioná Agregar.</p></div>';
+    html += '<div class="empty"><div class="empty-icon">🗄</div><h3>El cajón está vacío</h3><p>Escribí arriba lo que quieras tener presente y presioná Agregar.</p></div>';
   } else {
     html += sorted.map(function(it) {
       if (editPresenteId === it.id) {
@@ -883,6 +885,7 @@ function renderPresente() {
         + '<div class="pres-body"><div class="pres-title">' + esc(it.title) + '</div>'
         + (it.detail ? '<div class="pres-detail">' + esc(it.detail) + '</div>' : '')
         + '<div class="pres-date">' + esc(ideaDateLabel(it.createdAt)) + '</div></div>'
+        + '<button class="pres-convert" title="Convertir en tarea" onclick="convertPresenteToTask(\'' + it.id + '\')">→ Tarea</button>'
         + '<div class="pres-actions">'
         + '<button class="task-btn" title="Destacar" onclick="togglePinPresente(\'' + it.id + '\')">' + (it.pinned ? '★' : '☆') + '</button>'
         + '<button class="task-btn" title="Editar" onclick="startEditPresente(\'' + it.id + '\')">✎</button>'
@@ -939,6 +942,17 @@ function togglePinPresente(id) {
   if (it) it.pinned = !it.pinned;
   savePresente();
   renderPresente();
+}
+
+function convertPresenteToTask(id) {
+  var it = presentes.find(function(x){ return x.id === id; });
+  if (!it) return;
+  tasks.push({ id: genId(), title: it.title, cliente: null, urgency: 'medium', effort: 'medium', notes: it.detail || '', dueDate: null, revision: false, seguimiento: false, delegated: false, delegatedTo: null, horas: null, done: false, day: null, createdAt: new Date().toISOString() });
+  presentes = presentes.filter(function(x){ return x.id !== id; });
+  if (editPresenteId === id) editPresenteId = null;
+  savePresente();
+  saveTasks();
+  switchTab('tasks');
 }
 
 function deletePresente(id) {
