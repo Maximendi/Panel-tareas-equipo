@@ -486,6 +486,19 @@
   .notebook-entry-btn.del:hover { background: #fff1f2; color: #e11d48; }
   .notebook-empty { font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 13px; color: #a89f8e; padding-top: 6px; }
 
+/* ── Presente: cosas a tener presente (sin tarea ni vencimiento) ── */
+.pres-intro { font-size: 12px; color: var(--text-3); margin-bottom: 14px; }
+.pres-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 12px; margin-bottom: 8px; box-shadow: var(--shadow); transition: box-shadow .2s; }
+.pres-item:hover { box-shadow: var(--shadow-hv); }
+.pres-item.pinned { border-left-color: var(--accent); background: var(--accent-lt); }
+.pres-item.editing { flex-direction: column; align-items: stretch; border-left-color: var(--accent); }
+.pres-body { flex: 1; min-width: 0; }
+.pres-title { font-size: 14px; font-weight: 700; color: var(--text); line-height: 1.4; word-break: break-word; }
+.pres-detail { font-size: 12px; color: var(--text-2); line-height: 1.6; margin-top: 4px; white-space: pre-wrap; word-break: break-word; }
+.pres-date { font-size: 10px; font-weight: 600; color: var(--text-3); margin-top: 6px; }
+.pres-actions { display: flex; gap: 2px; opacity: 0; transition: opacity .15s; flex-shrink: 0; }
+.pres-item:hover .pres-actions { opacity: 1; }
+
 </style>
 </head>
 <body>
@@ -537,6 +550,7 @@
       <button class="tab"        id="tab-semana"   onclick="switchTab('semana')">📅 Semana <span class="tab-badge" id="badge-semana">0</span></button>
       <button class="tab"        id="tab-foco"      onclick="switchTab('foco')">🎯 Foco Semanal <span class="tab-badge" id="badge-foco"></span></button>
       <button class="tab"        id="tab-desglose"      onclick="switchTab('desglose')">📋 Desglose <span class="tab-badge" id="badge-desglose"></span></button>
+      <button class="tab"        id="tab-presente"  onclick="switchTab('presente')">📌 Presente <span class="tab-badge" id="badge-presente"></span></button>
       <button class="tab"        id="tab-completed" onclick="switchTab('completed')">✓ Completadas <span class="tab-badge" id="badge-completed"></span></button>
     </div>
     <button class="ideas-fab" id="ideas-fab" onclick="showIdeas()" title="Espacio para ideas sueltas">
@@ -567,7 +581,12 @@
     <div id="desglose-content"></div>
   </div>
 
-  <!-- Completed pane -->
+  <!-- Presente pane -->
+<div class="tab-pane" id="pane-presente">
+<div id="presente-content"></div>
+</div>
+
+<!-- Completed pane -->
   <div class="tab-pane" id="pane-completed">
     <div id="completed-content"></div>
   </div>
@@ -737,6 +756,8 @@ let vencEditId      = null; // id de tarea con date-picker abierto en Vencimient
 let delaFollowEditId = null; // id de tarea con date-picker de seguimiento abierto en Delegadas
 let delaDateEditId   = null; // id de tarea con date-picker de fecha de delegación abierto
 let ideas            = JSON.parse(localStorage.getItem('sm_ideas_v1') || '[]');
+let presentes        = JSON.parse(localStorage.getItem('sm_presente_v1') || '[]');
+let editPresenteId   = null; // id de la nota en modo edición
 let editIdeaId       = null; // id de idea en modo edición dentro del cuaderno
 // migrate old today:true → day:'hoy'
 tasks = tasks.map(t => { if (t.today === true && !t.day) { t.day = 'hoy'; } return t; });
@@ -776,7 +797,7 @@ function updateHeaderDate() {
 // =============================================================================
 function switchTab(name) {
   activeTab = name;
-  ['hoy','semana','tasks','desglose','foco','completed'].forEach(t => {
+  ['hoy','semana','tasks','desglose','foco','presente','completed'].forEach(t => {
     document.getElementById('tab-'+t).className  = 'tab'+(t==='tasks'?' tab-primary':'')+(t===name?' active':'');
     document.getElementById('pane-'+t).className = 'tab-pane'+(t===name?' active':'');
   });
@@ -784,6 +805,7 @@ function switchTab(name) {
   if (name === 'completed')    renderCompleted();
   if (name === 'desglose')     renderDesglose();
   if (name === 'foco')         renderFocoSemanal();
+  if (name === 'presente')      renderPresente();
   if (name === 'tasks') {
     if (taskFilter === 'delegadas')    renderDelegadas();
     if (taskFilter === 'vencimientos') renderVencimientos();
@@ -811,6 +833,119 @@ function setTaskFilter(f) {
   if (f === 'seguimiento')  renderSeguimiento();
 }
 
+
+// ═══════════════════════════════════════════════════════════════
+// PRESENTE — cosas a tener presente (no son tareas y no tienen vencimiento)
+// ═══════════════════════════════════════════════════════════════
+
+function savePresente() {
+  localStorage.setItem('sm_presente_v1', JSON.stringify(presentes));
+  updatePresenteBadge();
+}
+
+function updatePresenteBadge() {
+  var el = document.getElementById('badge-presente');
+  if (el) el.textContent = presentes.length ? presentes.length : '';
+}
+
+function renderPresente() {
+  var el = document.getElementById('presente-content');
+  if (!el) return;
+
+  var sorted = presentes.slice().sort(function(a, b) {
+    return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || new Date(b.createdAt) - new Date(a.createdAt);
+  });
+
+  var html = '<div class="pres-intro">Cosas para tener presente: no son tareas y no tienen vencimiento.</div>'
+    + '<div class="task-form">'
+    + '<div class="form-group"><label>Qué quiero tener presente</label>'
+    + '<input id="pres-title" placeholder="Anotá algo para tener presente…" onkeydown="if(event.key===\'Enter\')addPresente()"></div>'
+    + '<div class="form-group"><label>Detalle (opcional)</label>'
+    + '<textarea id="pres-detail" rows="2" placeholder="Contexto, norma, referencia…"></textarea></div>'
+    + '<div class="form-actions"><button class="btn-save" onclick="addPresente()">Agregar</button></div>'
+    + '</div>';
+
+  if (!sorted.length) {
+    html += '<div class="empty"><div class="empty-icon">📌</div><h3>Todavía no hay nada anotado</h3><p>Escribí arriba lo que quieras tener presente y presioná Agregar.</p></div>';
+  } else {
+    html += sorted.map(function(it) {
+      if (editPresenteId === it.id) {
+        return '<div class="pres-item editing">'
+          + '<div class="form-group"><label>Qué quiero tener presente</label>'
+          + '<input id="pres-edit-title" value="' + esc(it.title) + '" onkeydown="if(event.key===\'Enter\')savePresenteEdit(\'' + it.id + '\');if(event.key===\'Escape\')cancelPresenteEdit()"></div>'
+          + '<div class="form-group"><label>Detalle (opcional)</label>'
+          + '<textarea id="pres-edit-detail" rows="2">' + esc(it.detail || '') + '</textarea></div>'
+          + '<div class="form-actions"><button class="btn-cancel" onclick="cancelPresenteEdit()">Cancelar</button>'
+          + '<button class="btn-save" onclick="savePresenteEdit(\'' + it.id + '\')">Guardar</button></div>'
+          + '</div>';
+      }
+      return '<div class="pres-item' + (it.pinned ? ' pinned' : '') + '">'
+        + '<div class="pres-body"><div class="pres-title">' + esc(it.title) + '</div>'
+        + (it.detail ? '<div class="pres-detail">' + esc(it.detail) + '</div>' : '')
+        + '<div class="pres-date">' + esc(ideaDateLabel(it.createdAt)) + '</div></div>'
+        + '<div class="pres-actions">'
+        + '<button class="task-btn" title="Destacar" onclick="togglePinPresente(\'' + it.id + '\')">' + (it.pinned ? '★' : '☆') + '</button>'
+        + '<button class="task-btn" title="Editar" onclick="startEditPresente(\'' + it.id + '\')">✎</button>'
+        + '<button class="task-btn del" title="Eliminar" onclick="deletePresente(\'' + it.id + '\')">✕</button>'
+        + '</div></div>';
+    }).join('');
+  }
+
+  el.innerHTML = html;
+  if (editPresenteId) {
+    var ei = document.getElementById('pres-edit-title');
+    if (ei) ei.focus();
+  }
+}
+
+function addPresente() {
+  var inp = document.getElementById('pres-title');
+  var det = document.getElementById('pres-detail');
+  if (!inp) return;
+  var title = (inp.value || '').trim();
+  if (!title) { inp.focus(); return; }
+  presentes.push({ id: genId(), title: title, detail: ((det && det.value) || '').trim(), pinned: false, createdAt: new Date().toISOString() });
+  savePresente();
+  renderPresente();
+  setTimeout(function(){ var n = document.getElementById('pres-title'); if (n) n.focus(); }, 30);
+}
+
+function startEditPresente(id) {
+  editPresenteId = id;
+  renderPresente();
+}
+
+function savePresenteEdit(id) {
+  var inp = document.getElementById('pres-edit-title');
+  var det = document.getElementById('pres-edit-detail');
+  var it = presentes.find(function(x){ return x.id === id; });
+  if (it && inp) {
+    var val = (inp.value || '').trim();
+    if (val) it.title = val;
+    it.detail = ((det && det.value) || '').trim();
+  }
+  editPresenteId = null;
+  savePresente();
+  renderPresente();
+}
+
+function cancelPresenteEdit() {
+  editPresenteId = null;
+  renderPresente();
+}
+
+function togglePinPresente(id) {
+  var it = presentes.find(function(x){ return x.id === id; });
+  if (it) it.pinned = !it.pinned;
+  savePresente();
+  renderPresente();
+}
+
+function deletePresente(id) {
+  presentes = presentes.filter(function(x){ return x.id !== id; });
+  savePresente();
+  renderPresente();
+}
 
 // =============================================================================
 // IDEAS — cuaderno aparte para anotar ideas sueltas que no son tareas
@@ -3296,7 +3431,7 @@ function runGlobalSearch() {
 // RESPALDO — EXPORTAR / IMPORTAR JSON
 // =============================================================================
 var BACKUP_KEYS = [
-  'sm_tasks_v3', 'sm_ideas_v1',
+  'sm_tasks_v3', 'sm_ideas_v1', 'sm_presente_v1',
   'sm_foco_semanal_v1', 'sm_foco_semanal_week_v1', 'sm_desglose_v1', 'sm_last_seen_date_v1'
 ];
 
@@ -3353,6 +3488,7 @@ function reloadStateFromStorage() {
   });
   hoyExtras      = JSON.parse(localStorage.getItem('sm_hoy_extras_v1') || '{}');
   ideas          = JSON.parse(localStorage.getItem('sm_ideas_v1') || '[]');
+  presentes      = JSON.parse(localStorage.getItem('sm_presente_v1') || '[]');
   focoItems      = JSON.parse(localStorage.getItem('sm_foco_semanal_v1') || '[]');
   focoWeekKey    = localStorage.getItem('sm_foco_semanal_week_v1') || '';
   desgloses      = JSON.parse(localStorage.getItem('sm_desglose_v1') || '[]');
@@ -3373,6 +3509,8 @@ function reloadStateFromStorage() {
   updateRevisionBadge(); updateSeguimientoBadge();
   updateStatusCounts();
   updateIdeasBadge();
+  updatePresenteBadge();
+  if (activeTab === 'presente') renderPresente();
   if (document.getElementById('ideas-overlay')?.style.display === 'flex') renderIdeas();
 }
 
@@ -3675,6 +3813,7 @@ function bootApp() {
   updateFocoBadge();
   updateStatusCounts();
   updateIdeasBadge();
+  updatePresenteBadge();
 }
 
 // =============================================================================
